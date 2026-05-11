@@ -4,7 +4,7 @@ import gradio as gr
 from profile_extractor import extract_patient_profile
 from trial_fetcher import fetch_trials
 from matcher import match_patient_to_trial
-from extras import draft_inquiry_email, explain_in_urdu
+from extras import generate_inquiry_email, explain_in_urdu
 
 # ---------------------------------------------------------------------------
 # Static HTML
@@ -43,7 +43,7 @@ def _format_results(matches, total_trials, key_flags=None):
     lines.append(f"Found {len(matches)} potential match(es) out of {total_trials} trial(s) reviewed.\n")
     for m in matches:
         verdict = m["verdict"]
-        conf = m["confidence"]
+        conf = m["confidence_score"]
 
         if verdict == "MATCH":
             label = f"MATCH  |  Confidence: {conf}/100"
@@ -246,7 +246,7 @@ def run_trialmatch(pdf_file, condition):
         for m in match_only:
             print(f"[app] Drafting email for: {m['trial_title'][:50]}...")
             try:
-                email_text = draft_inquiry_email(patient_profile, m)
+                email_text = generate_inquiry_email(patient_profile, m)
                 email_parts.append(
                     f"{'─' * 64}\nTrial: {m['trial_title']}\nNCT:   {m['nct_id']}\n\n{email_text}"
                 )
@@ -321,6 +321,7 @@ with gr.Blocks(title="TrialMatch") as demo:
                             lines=18,
                             placeholder="Email drafts will appear here after analysis completes.",
                         )
+                        copy_btn = gr.Button("📋  Copy Email to Clipboard", variant="secondary")
 
                     with gr.Accordion("🌐  اردو وضاحت — Explain in Urdu", open=False):
                         gr.Markdown(
@@ -348,6 +349,27 @@ with gr.Blocks(title="TrialMatch") as demo:
                 outputs=[urdu_box],
             )
 
+            copy_btn.click(
+                fn=None,
+                inputs=[email_box],
+                outputs=[],
+                js=(
+                    "(text) => {"
+                    "  if (!text) { alert('No email to copy yet — run the analysis first.'); return []; }"
+                    "  navigator.clipboard.writeText(text)"
+                    "    .then(() => alert('Email copied to clipboard!'))"
+                    "    .catch(() => { "
+                    "      const el = document.createElement('textarea');"
+                    "      el.value = text; document.body.appendChild(el);"
+                    "      el.select(); document.execCommand('copy');"
+                    "      document.body.removeChild(el);"
+                    "      alert('Email copied to clipboard!');"
+                    "    });"
+                    "  return [];"
+                    "}"
+                ),
+            )
+
         # ── System Check tab ───────────────────────────────────────────────
         with gr.Tab("System Check"):
             gr.Markdown(
@@ -362,10 +384,20 @@ with gr.Blocks(title="TrialMatch") as demo:
 
 
 if __name__ == "__main__":
-    print("Starting TrialMatch — open http://127.0.0.1:7860 in your browser")
+    import socket
+
+    def _find_free_port(start=7860, end=7880):
+        for port in range(start, end + 1):
+            with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+                if s.connect_ex(("127.0.0.1", port)) != 0:
+                    return port
+        return start  # fallback — Gradio will show a clear error
+
+    port = _find_free_port()
+    print(f"Starting TrialMatch — open http://127.0.0.1:{port} in your browser")
     demo.launch(
         server_name="127.0.0.1",
-        server_port=7860,
+        server_port=port,
         share=False,
         inbrowser=False,
         theme=gr.themes.Soft(),

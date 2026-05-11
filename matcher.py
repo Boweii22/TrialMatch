@@ -10,7 +10,7 @@ def _parse_match_response(text):
     """Extract structured fields from a MATCHING_PROMPT response."""
     parsed = {
         "verdict":      "UNKNOWN",
-        "confidence":   50,
+        "confidence_score":   50,
         "reason":       text.strip(),
         "disqualifiers": "NONE",
         "next_step":    "",
@@ -27,7 +27,7 @@ def _parse_match_response(text):
         elif upper.startswith("CONFIDENCE:"):
             nums = re.findall(r"\d+", line[11:])
             if nums:
-                parsed["confidence"] = min(100, max(0, int(nums[0])))
+                parsed["confidence_score"] = min(100, max(0, int(nums[0])))
         elif upper.startswith("REASON:"):
             parsed["reason"] = line[7:].strip()
         elif upper.startswith("DISQUALIFIERS:"):
@@ -86,12 +86,12 @@ def match_patient_to_trial(patient_profile, clinical_reasoning, trial):
             "trial_title":        title,
             "nct_id":             nct_id,
             "verdict":            parsed["verdict"],
-            "confidence":         parsed["confidence"],
+            "confidence_score":         parsed["confidence_score"],
             "reason":             parsed["reason"],
             "disqualifiers":      parsed["disqualifiers"],
             "next_step":          parsed["next_step"],
             "disqualifier_detail": disqualifier_detail,
-            "raw_result":         raw,
+            "raw_response":         raw,
             "contact_name":       contact_name,
             "contact_email":      contact_email,
             "contact_phone":      contact_phone,
@@ -106,12 +106,12 @@ def match_patient_to_trial(patient_profile, clinical_reasoning, trial):
             "trial_title":        title,
             "nct_id":             nct_id,
             "verdict":            "ERROR",
-            "confidence":         0,
+            "confidence_score":         0,
             "reason":             f"Could not process this trial: {e}",
             "disqualifiers":      "",
             "next_step":          "",
             "disqualifier_detail": "",
-            "raw_result":         f"ERROR: {e}",
+            "raw_response":         f"ERROR: {e}",
             "contact_name":       contact_name,
             "contact_email":      contact_email,
             "contact_phone":      contact_phone,
