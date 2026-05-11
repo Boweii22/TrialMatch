@@ -9,14 +9,14 @@ _MAX_ELIGIBILITY_CHARS = 1500
 def _parse_match_response(text):
     """Extract structured fields from a MATCHING_PROMPT response."""
     parsed = {
-        "verdict": "UNKNOWN",
-        "confidence": 50,
-        "reason": text.strip(),
+        "verdict":      "UNKNOWN",
+        "confidence":   50,
+        "reason":       text.strip(),
         "disqualifiers": "NONE",
-        "next_step": "",
+        "next_step":    "",
     }
     for line in text.split("\n"):
-        line = line.strip()
+        line  = line.strip()
         upper = line.upper()
         if upper.startswith("VERDICT:"):
             val = line[8:].strip().upper()
@@ -37,76 +37,44 @@ def _parse_match_response(text):
     return parsed
 
 
-def _get_contact_info(trial):
-    """Pull coordinator contact details from a ClinicalTrials.gov study dict."""
-    try:
-        contacts = (
-            trial.get("protocolSection", {})
-            .get("contactsLocationsModule", {})
-            .get("centralContacts", [])
-        )
-        if contacts:
-            c = contacts[0]
-            return {
-                "contact_name": c.get("name", "Trial Coordinator"),
-                "contact_email": c.get("email", "see ClinicalTrials.gov"),
-                "contact_phone": c.get("phone", "see ClinicalTrials.gov"),
-            }
-    except Exception:
-        pass
-    return {
-        "contact_name": "Trial Coordinator",
-        "contact_email": "see ClinicalTrials.gov",
-        "contact_phone": "see ClinicalTrials.gov",
-    }
-
-
 def match_patient_to_trial(patient_profile, clinical_reasoning, trial):
     """
     Match a patient to a single trial.
 
-    For NO/PARTIAL verdicts also runs DISQUALIFIER_PROMPT to cite exact
-    criteria lines the patient fails — shown in the UI as detailed analysis.
+    trial must be a clean dict as returned by trial_fetcher.fetch_trials().
+    For NO/PARTIAL verdicts, also runs DISQUALIFIER_PROMPT to cite exact
+    criteria lines the patient fails.
 
-    Returns a dict with keys:
-        trial_title, nct_id, verdict, confidence, reason, disqualifiers,
-        next_step, disqualifier_detail, contact_name, contact_email,
-        contact_phone, raw_result
+    Returns a rich dict with all fields needed by app.py and extras.py.
     """
-    title = "Unknown Trial"
-    nct_id = "Unknown ID"
+    # ── Read clean fields from pre-extracted trial dict ──────────────────────
+    title                = trial.get("title", "Unknown Trial")
+    nct_id               = trial.get("nct_id", "Unknown ID")
+    eligibility_text     = trial.get("eligibility_criteria", "No eligibility criteria available.")
+    eligibility_text     = eligibility_text[:_MAX_ELIGIBILITY_CHARS]
+    contact_name         = trial.get("contact_name",  "Trial Coordinator")
+    contact_email        = trial.get("contact_email", "see ClinicalTrials.gov")
+    contact_phone        = trial.get("contact_phone", "see ClinicalTrials.gov")
 
     try:
-        protocol = trial.get("protocolSection", {})
-        id_module = protocol.get("identificationModule", {})
-        eligibility_module = protocol.get("eligibilityModule", {})
-
-        title = id_module.get("briefTitle", "Unknown Trial")
-        nct_id = id_module.get("nctId", "Unknown ID")
-        eligibility_text = eligibility_module.get(
-            "eligibilityCriteria", "No eligibility criteria available."
-        )[:_MAX_ELIGIBILITY_CHARS]
-
-        contact_info = _get_contact_info(trial)
-
-        # ── Primary matching ────────────────────────────────────────────────
+        # ── Primary matching ─────────────────────────────────────────────────
         prompt = MATCHING_PROMPT.format(
-            patient_profile=patient_profile,
-            clinical_reasoning=clinical_reasoning,
-            eligibility_criteria=eligibility_text,
+            patient_profile     = patient_profile,
+            clinical_reasoning  = clinical_reasoning,
+            eligibility_criteria = eligibility_text,
         )
-        raw = stream_response([{"role": "user", "content": prompt}])
+        raw    = stream_response([{"role": "user", "content": prompt}])
         parsed = _parse_match_response(raw)
 
-        # ── Disqualifier detail for NO / PARTIAL ────────────────────────────
+        # ── Disqualifier detail for NO / PARTIAL ─────────────────────────────
         disqualifier_detail = ""
         if parsed["verdict"] in ("NO", "PARTIAL"):
-            print(f"[matcher] Running disqualifier analysis for verdict={parsed['verdict']}...")
+            print(f"[matcher] Running disqualifier analysis (verdict={parsed['verdict']})...")
             try:
                 dq_prompt = DISQUALIFIER_PROMPT.format(
-                    patient_profile=patient_profile,
-                    eligibility_criteria=eligibility_text,
-                    verdict=parsed["verdict"],
+                    patient_profile      = patient_profile,
+                    eligibility_criteria = eligibility_text,
+                    verdict              = parsed["verdict"],
                 )
                 disqualifier_detail = stream_response(
                     [{"role": "user", "content": dq_prompt}]
@@ -115,30 +83,39 @@ def match_patient_to_trial(patient_profile, clinical_reasoning, trial):
                 disqualifier_detail = f"[detailed analysis unavailable: {e}]"
 
         return {
-            "trial_title": title,
-            "nct_id": nct_id,
-            "verdict": parsed["verdict"],
-            "confidence": parsed["confidence"],
-            "reason": parsed["reason"],
-            "disqualifiers": parsed["disqualifiers"],
-            "next_step": parsed["next_step"],
+            "trial_title":        title,
+            "nct_id":             nct_id,
+            "verdict":            parsed["verdict"],
+            "confidence":         parsed["confidence"],
+            "reason":             parsed["reason"],
+            "disqualifiers":      parsed["disqualifiers"],
+            "next_step":          parsed["next_step"],
             "disqualifier_detail": disqualifier_detail,
-            "raw_result": raw,
-            **contact_info,
+            "raw_result":         raw,
+            "contact_name":       contact_name,
+            "contact_email":      contact_email,
+            "contact_phone":      contact_phone,
+            # Pass through extra trial metadata for richer display
+            "location":           trial.get("location", ""),
+            "phase":              trial.get("phase", ""),
+            "sponsor":            trial.get("sponsor", ""),
         }
 
     except Exception as e:
         return {
-            "trial_title": title,
-            "nct_id": nct_id,
-            "verdict": "ERROR",
-            "confidence": 0,
-            "reason": f"Could not process this trial: {e}",
-            "disqualifiers": "",
-            "next_step": "",
+            "trial_title":        title,
+            "nct_id":             nct_id,
+            "verdict":            "ERROR",
+            "confidence":         0,
+            "reason":             f"Could not process this trial: {e}",
+            "disqualifiers":      "",
+            "next_step":          "",
             "disqualifier_detail": "",
-            "raw_result": f"ERROR: {e}",
-            "contact_name": "Unknown",
-            "contact_email": "",
-            "contact_phone": "",
+            "raw_result":         f"ERROR: {e}",
+            "contact_name":       contact_name,
+            "contact_email":      contact_email,
+            "contact_phone":      contact_phone,
+            "location":           trial.get("location", ""),
+            "phase":              trial.get("phase", ""),
+            "sponsor":            trial.get("sponsor", ""),
         }

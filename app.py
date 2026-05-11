@@ -52,9 +52,15 @@ def _format_results(matches, total_trials, key_flags=None):
         else:
             label = verdict
 
+        phase   = m.get("phase", "")
+        sponsor = m.get("sponsor", "")
+        location = m.get("location", "")
+
+        lines += ["━" * 64, f"Trial:     {m['trial_title']}"]
+        if phase   and phase   != "Not specified": lines.append(f"Phase:     {phase}")
+        if sponsor and sponsor != "Unknown sponsor": lines.append(f"Sponsor:   {sponsor}")
+        if location and location != "See ClinicalTrials.gov": lines.append(f"Location:  {location}")
         lines += [
-            "━" * 64,
-            f"Trial:     {m['trial_title']}",
             f"NCT ID:    {m['nct_id']}",
             f"Link:      https://clinicaltrials.gov/study/{m['nct_id']}",
             "",
@@ -200,11 +206,7 @@ def run_trialmatch(pdf_file, condition):
 
     for i, trial in enumerate(trials):
         try:
-            trial_title = (
-                trial.get("protocolSection", {})
-                .get("identificationModule", {})
-                .get("briefTitle", f"Trial {i + 1}")
-            )
+            trial_title = trial.get("title", f"Trial {i + 1}")
         except Exception:
             trial_title = f"Trial {i + 1}"
 
