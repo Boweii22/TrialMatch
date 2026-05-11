@@ -1,3 +1,6 @@
+# ── EXTRACTION_PROMPT ────────────────────────────────────────────────────────
+# Used with vision (PDF page images). Extracts structured medical profile.
+
 EXTRACTION_PROMPT = """You are a medical records analyst. Carefully examine the medical document shown in the image and extract the following information. Only extract information that is explicitly visible in the document. Never guess, infer, or fabricate information that is not clearly written.
 
 Output ONLY the following structured format with these exact field labels. Do not output anything before or after this block:
@@ -16,17 +19,124 @@ If any field is not found in the document write NOT FOUND for that field.
 Do not output any commentary, disclaimers, or text outside the structured format."""
 
 
+# ── REASONING_PROMPT ──────────────────────────────────────────────────────────
+# Text-only pass after extraction. Produces a clinical summary that improves
+# matching accuracy by contextualising the raw extracted data.
+
+REASONING_PROMPT = """You are a senior clinical physician reviewing an extracted patient profile.
+
+EXTRACTED PATIENT PROFILE:
+{extracted_profile}
+
+Based only on the information above, provide a brief clinical reasoning summary. Consider the severity and likely duration of the primary diagnosis, whether the current medications indicate stable or unstable disease, how lab values place the patient on the clinical spectrum, and any secondary conditions or flags that would affect trial eligibility.
+
+Output ONLY the following four lines. Do not write anything before or after them:
+CLINICAL SEVERITY: [mild / moderate / severe / unknown]
+DISEASE STABILITY: [stable / unstable / unknown]
+KEY CLINICAL FACTORS: [2–3 concise bullet points of the most relevant factors for trial eligibility]
+POTENTIAL CONCERNS: [flags that might disqualify from trials, or NONE]"""
+
+
+# ── MATCHING_PROMPT ───────────────────────────────────────────────────────────
+# Takes profile + clinical reasoning + trial eligibility criteria.
+# Outputs verdict with confidence score and specific disqualifiers.
+
 MATCHING_PROMPT = """You are a clinical trial eligibility screener.
 
 PATIENT PROFILE:
 {patient_profile}
 
-CLINICAL TRIAL ELIGIBILITY CRITERIA:
+CLINICAL REASONING SUMMARY:
+{clinical_reasoning}
+
+TRIAL ELIGIBILITY CRITERIA:
 {eligibility_criteria}
 
-Based solely on the information provided above, determine if this patient qualifies for this clinical trial.
+Based solely on the information provided above, determine if this patient qualifies for this trial.
 
-Output ONLY the following three lines. Do not write anything before or after them:
-VERDICT: [write MATCH if the patient clearly qualifies, PARTIAL if they may qualify but there is uncertainty, or NO if they clearly do not qualify]
-REASON: [one sentence in plain English that a non-medical person can understand explaining the verdict]
-NEXT STEP: [one sentence on what the patient should do if they are interested in this trial]"""
+Output ONLY the following five lines. Do not write anything before or after them:
+VERDICT: [write MATCH if the patient clearly qualifies, PARTIAL if there is uncertainty, or NO if clearly does not qualify]
+CONFIDENCE: [integer from 0 to 100 representing how certain you are of the verdict]
+REASON: [one sentence in plain English that a non-medical person can understand]
+DISQUALIFIERS: [specific criteria the patient fails, or NONE if verdict is MATCH]
+NEXT STEP: [one sentence on what the patient should do if interested in this trial]"""
+
+
+# ── DISQUALIFIER_PROMPT ───────────────────────────────────────────────────────
+# Called only for NO or PARTIAL verdicts. Cites exact lines from the trial
+# criteria that the patient fails or is borderline on.
+
+DISQUALIFIER_PROMPT = """You are a clinical trial eligibility analyst.
+
+PATIENT PROFILE:
+{patient_profile}
+
+TRIAL ELIGIBILITY CRITERIA:
+{eligibility_criteria}
+
+INITIAL VERDICT: {verdict}
+
+Identify exactly which lines in the trial eligibility criteria this patient fails or is uncertain about. Quote directly from the eligibility criteria text.
+
+Output ONLY the following two sections:
+
+FAILED CRITERIA:
+[List each failed criterion as: "exact quoted text from criteria" — REASON: one sentence why the patient fails this based on their profile]
+[Write NONE if there are no clear failures]
+
+BORDERLINE CRITERIA:
+[List each uncertain criterion as: "exact quoted text from criteria" — REASON: one sentence why this is uncertain]
+[Write NONE if there are no borderline criteria]"""
+
+
+# ── EMAIL_DRAFT_PROMPT ────────────────────────────────────────────────────────
+# Generates a professional inquiry email to the trial coordinator.
+# Uses real contact details fetched from the ClinicalTrials.gov API.
+
+EMAIL_DRAFT_PROMPT = """You are a medical communications assistant.
+
+TRIAL TITLE: {trial_title}
+NCT ID: {nct_id}
+TRIAL COORDINATOR CONTACT:
+{contact_info}
+
+MATCH REASON: {reason}
+
+PATIENT BACKGROUND (de-identified summary):
+{patient_profile}
+
+Draft a professional and concise inquiry email from the patient (or their physician) to the trial coordinator expressing interest in participating.
+
+The email must:
+- Open with a brief, polite introduction
+- State which specific trial is being enquired about, referencing both the NCT ID and title
+- Summarise the patient's relevant medical background in 2–3 sentences without including any identifying information
+- Ask clearly about the next steps to begin the screening process
+- Close with a polite sign-off
+
+Output ONLY the email in this exact format, nothing else:
+SUBJECT: [subject line]
+
+BODY:
+[full email body]"""
+
+
+# ── URDU_EXPLAIN_PROMPT ───────────────────────────────────────────────────────
+# Translates and explains the final results in simple Urdu for patients
+# who cannot read English.
+
+URDU_EXPLAIN_PROMPT = """آپ ایک طبی مترجم ہیں جو ایک ایسے مریض کی مدد کر رہے ہیں جو اردو پڑھتے ہیں لیکن انگریزی نہیں سمجھتے۔
+
+نیچے انگریزی میں کلینیکل ٹرائل میچنگ کے نتائج دیے گئے ہیں۔ انہیں سادہ، روزمرہ کی اردو میں ترجمہ کریں اور سمجھائیں جو ایک عام انسان آسانی سے سمجھ سکے۔ پیچیدہ طبی اصطلاحات کو آسان الفاظ میں بیان کریں۔
+
+انگریزی نتائج:
+{results_text}
+
+ہدایات:
+- صرف اردو رسم الخط میں لکھیں
+- گرم، واضح اور حوصلہ افزا انداز اختیار کریں
+- ہر ٹرائل کا نتیجہ علیحدہ پیراگراف میں بیان کریں
+- MATCH کا مطلب سمجھائیں: یہ ٹرائل آپ کے لیے موزوں ہو سکتا ہے
+- PARTIAL کا مطلب سمجھائیں: مزید جانچ کی ضرورت ہے
+- آخر میں یاد دلائیں کہ کسی بھی فیصلے سے پہلے اپنے ڈاکٹر سے ضرور مشورہ کریں
+- انگریزی متن شامل نہ کریں"""

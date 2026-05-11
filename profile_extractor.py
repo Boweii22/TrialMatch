@@ -1,39 +1,18 @@
 import io
 
-import ollama
-
+from utils import MODEL, stream_response
 from pdf_reader import pdf_to_images
-from prompts import EXTRACTION_PROMPT
-
-_MODEL = "gemma3:4b"
-
-
-def _stream_response(messages):
-    """Call ollama.chat with streaming and return the concatenated text."""
-    response_text = ""
-    stream = ollama.chat(model=_MODEL, messages=messages, stream=True)
-    for chunk in stream:
-        try:
-            # ollama SDK >= 0.2: chunk is a ChatResponse object
-            content = chunk.message.content
-            if content:
-                response_text += content
-        except AttributeError:
-            # Fallback for dict-style response
-            try:
-                content = chunk["message"]["content"]
-                if content:
-                    response_text += content
-            except (KeyError, TypeError):
-                pass
-    return response_text
+from prompts import EXTRACTION_PROMPT, REASONING_PROMPT
 
 
 def extract_patient_profile(pdf_path):
     """
-    Read up to 3 pages of pdf_path, send each page image to Gemma 4,
-    and return a concatenated patient profile string.
-    Returns an 'ERROR: ...' string on failure instead of raising.
+    Step 1 — Extract structured medical data from up to 3 PDF pages (vision pass).
+    Step 2 — Run a clinical reasoning pass on the extracted text (text-only pass).
+
+    Returns:
+        dict   {'profile': str, 'reasoning': str}   on success
+        str    'ERROR: ...'                          on any failure
     """
     try:
         images = pdf_to_images(pdf_path)
@@ -49,42 +28,48 @@ def extract_patient_profile(pdf_path):
     profile_parts = []
     total_pages = len(images)
 
+    # ── Vision pass: extract raw medical data from each page ────────────────
     for i, img in enumerate(images):
-        print(f"[profile_extractor] Reading page {i + 1} of {total_pages}...")
+        print(f"[profile_extractor] Extracting page {i + 1} of {total_pages}...")
         try:
             buf = io.BytesIO()
             img.save(buf, format="PNG")
             img_bytes = buf.getvalue()
             buf.close()
-            del img  # free PIL image memory
+            del img
 
-            messages = [
-                {
-                    "role": "user",
-                    "content": EXTRACTION_PROMPT,
-                    "images": [img_bytes],
-                }
-            ]
-            page_text = _stream_response(messages)
+            page_text = stream_response(
+                [{"role": "user", "content": EXTRACTION_PROMPT, "images": [img_bytes]}]
+            )
             del img_bytes
-
-            profile_parts.append(f"--- Page {i + 1} ---\n{page_text.strip()}")
+            profile_parts.append(f"--- Page {i + 1} ---\n{page_text}")
 
         except Exception as e:
-            err_lower = str(e).lower()
-            if any(kw in err_lower for kw in ("connection", "refused", "connect", "socket")):
+            err = str(e).lower()
+            if any(kw in err for kw in ("connection", "refused", "connect", "socket")):
                 return (
                     "ERROR: Cannot connect to Ollama. "
-                    "Please start Ollama by running 'ollama serve' in a terminal, then try again."
+                    "Please ensure Ollama is running, then try again."
                 )
-            if any(kw in err_lower for kw in ("not found", "model", "pull")):
+            if any(kw in err for kw in ("not found", "model", "pull")):
                 return (
-                    f"ERROR: Model {_MODEL!r} not found in Ollama. "
-                    f"Please run 'ollama pull {_MODEL}' in a terminal, then try again."
+                    f"ERROR: Model {MODEL!r} not found. "
+                    f"Please run 'ollama pull {MODEL}' and try again."
                 )
             profile_parts.append(f"--- Page {i + 1} --- [extraction error: {e}]")
 
-    if not profile_parts:
+    combined_profile = "\n\n".join(profile_parts)
+    if not combined_profile.strip():
         return "ERROR: Profile extraction produced no output."
 
-    return "\n\n".join(profile_parts)
+    # ── Reasoning pass: clinical interpretation of extracted data ───────────
+    print("[profile_extractor] Running clinical reasoning pass...")
+    try:
+        reasoning_prompt = REASONING_PROMPT.format(extracted_profile=combined_profile)
+        clinical_reasoning = stream_response(
+            [{"role": "user", "content": reasoning_prompt}]
+        )
+    except Exception as e:
+        clinical_reasoning = f"[clinical reasoning unavailable: {e}]"
+
+    return {"profile": combined_profile, "reasoning": clinical_reasoning}
