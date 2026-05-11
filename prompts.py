@@ -121,6 +121,24 @@ BODY:
 [full email body]"""
 
 
+# ── TRANSLATION_PROMPT ───────────────────────────────────────────────────────
+# General-purpose field translator. Preserves English label names and all
+# medical codes so the translated output can be parsed back by the app.
+
+TRANSLATION_PROMPT = """Translate the following labeled clinical fields into {language}.
+
+Rules:
+- Preserve the label names exactly as written in English (REASON:, NEXT STEP:, DISQUALIFIERS:)
+- Keep all NCT IDs, drug names, dosages, lab values, and medical codes in English
+- Use simple everyday language that a patient without medical education can understand
+- For Urdu: write in Nastaliq Urdu script
+- For Arabic: write in standard Arabic script
+- Return ONLY the translated labeled fields, nothing else
+
+Fields to translate:
+{text}"""
+
+
 # ── URDU_EXPLAIN_PROMPT ───────────────────────────────────────────────────────
 # Translates and explains the final results in simple Urdu for patients
 # who cannot read English.

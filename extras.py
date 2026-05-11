@@ -1,5 +1,69 @@
 from utils import stream_response
-from prompts import EMAIL_DRAFT_PROMPT, URDU_EXPLAIN_PROMPT
+from prompts import EMAIL_DRAFT_PROMPT, URDU_EXPLAIN_PROMPT, TRANSLATION_PROMPT
+
+_TRANSLATABLE_FIELDS = ("reason", "next_step", "disqualifiers")
+_LANGUAGES = ("English", "Urdu", "Arabic", "French")
+
+
+def translate_matches(matches, language):
+    """
+    Translate only the plain-English explanation fields (reason, next_step,
+    disqualifiers) in each match dict. Trial titles, NCT IDs, medical codes,
+    and all other fields are left untouched.
+
+    Uses one LLM call per match (batched fields) to minimise CPU time.
+    Returns a new list of dicts with translated fields.
+    """
+    if language == "English" or not matches:
+        return matches
+
+    translated = []
+    for i, m in enumerate(matches):
+        print(f"[extras] Translating match {i + 1} of {len(matches)} to {language}...")
+        tm = dict(m)  # shallow copy — only mutate the three fields below
+
+        reason        = m.get("reason", "")
+        next_step     = m.get("next_step", "")
+        disqualifiers = m.get("disqualifiers", "NONE")
+
+        # Build a batched text block with labelled fields
+        batch_lines = []
+        if reason:
+            batch_lines.append(f"REASON: {reason}")
+        if next_step:
+            batch_lines.append(f"NEXT STEP: {next_step}")
+        if disqualifiers and disqualifiers.upper() not in ("NONE", ""):
+            batch_lines.append(f"DISQUALIFIERS: {disqualifiers}")
+
+        if not batch_lines:
+            translated.append(tm)
+            continue
+
+        try:
+            prompt = TRANSLATION_PROMPT.format(
+                language=language,
+                text="\n".join(batch_lines),
+            )
+            out = stream_response([{"role": "user", "content": prompt}])
+
+            # Parse translated fields back by their preserved English labels
+            for line in out.split("\n"):
+                line = line.strip()
+                upper = line.upper()
+                if upper.startswith("REASON:"):
+                    tm["reason"] = line[7:].strip()
+                elif upper.startswith("NEXT STEP:"):
+                    tm["next_step"] = line[10:].strip()
+                elif upper.startswith("DISQUALIFIERS:"):
+                    tm["disqualifiers"] = line[14:].strip()
+
+        except Exception as e:
+            print(f"[extras] Translation failed for match {i + 1}: {e}")
+            # Keep original English fields on failure
+
+        translated.append(tm)
+
+    return translated
 
 _MAX_RESULTS_FOR_URDU = 2500   # chars — Urdu model context limit
 
