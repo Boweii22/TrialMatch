@@ -1,3 +1,4 @@
+import gc
 import io
 
 import fitz  # PyMuPDF
@@ -30,6 +31,7 @@ def pdf_to_images(pdf_path, max_pages=3):
                 images.append(img)
                 del pix
                 del img_data
+                gc.collect()
             except Exception as e:
                 print(f"[pdf_reader] ERROR converting page {page_num + 1}: {e}")
     finally:
