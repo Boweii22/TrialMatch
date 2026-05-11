@@ -33,8 +33,14 @@ _DISCLAIMER_HTML = """
 # Result formatter
 # ---------------------------------------------------------------------------
 
-def _format_results(matches, total_trials):
-    lines = [f"Found {len(matches)} potential match(es) out of {total_trials} trial(s) reviewed.\n"]
+def _format_results(matches, total_trials, key_flags=None):
+    lines = []
+    if key_flags:
+        lines += ["── Clinical Profile Summary ────────────────────────────────"]
+        for flag in key_flags:
+            lines.append(f"  • {flag}")
+        lines.append("")
+    lines.append(f"Found {len(matches)} potential match(es) out of {total_trials} trial(s) reviewed.\n")
     for m in matches:
         verdict = m["verdict"]
         conf = m["confidence"]
@@ -161,8 +167,9 @@ def run_trialmatch(pdf_file, condition):
         yield profile_data, "", ""
         return
 
-    patient_profile = profile_data["profile"]
-    clinical_reasoning = profile_data["reasoning"]
+    patient_profile = profile_data["raw_extraction"]
+    clinical_reasoning = profile_data["clinical_reasoning"]
+    key_flags = profile_data["key_flags"]
 
     # ── Step 2: Fetch trials ─────────────────────────────────────────────────
     yield "Step 2/3 — Searching ClinicalTrials.gov for open recruiting trials...", "", ""
@@ -227,7 +234,7 @@ def run_trialmatch(pdf_file, condition):
         return
 
     # ── Format results ───────────────────────────────────────────────────────
-    results_text = _format_results(matches, total)
+    results_text = _format_results(matches, total, key_flags)
 
     # ── Draft emails for MATCH verdicts ──────────────────────────────────────
     match_only = [m for m in matches if m["verdict"] == "MATCH"]
