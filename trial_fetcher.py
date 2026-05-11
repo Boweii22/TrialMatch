@@ -41,11 +41,16 @@ def _extract_trial(study):
         # ── Location (first listed site) ─────────────────────────────────────
         locations = contacts_mod.get("locations", [])
         if locations:
-            loc      = locations[0]
-            facility = loc.get("facility", {}).get("name", "")
-            city     = loc.get("city", "")
-            country  = loc.get("country", "")
-            parts    = [p for p in (facility, city, country) if p]
+            loc         = locations[0]
+            facility_raw = loc.get("facility", "")
+            # ClinicalTrials.gov API v2: facility is a plain string, not a dict
+            if isinstance(facility_raw, dict):
+                facility = facility_raw.get("name", "")
+            else:
+                facility = str(facility_raw) if facility_raw else ""
+            city    = loc.get("city", "")
+            country = loc.get("country", "")
+            parts   = [p for p in (facility, city, country) if p]
             location = ", ".join(parts) if parts else "See ClinicalTrials.gov"
         else:
             location = "See ClinicalTrials.gov"
