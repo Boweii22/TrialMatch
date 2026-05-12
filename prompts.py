@@ -1,5 +1,30 @@
+# ── TEXT_EXTRACTION_PROMPT ───────────────────────────────────────────────────
+# Fast path: used when PyMuPDF can extract raw text directly from the PDF.
+# A single text-only LLM call replaces 2–3 slow vision calls.
+
+TEXT_EXTRACTION_PROMPT = """You are a medical records analyst. Read the following patient medical record text and extract the requested information. Only extract information explicitly present in the text. Never guess or fabricate.
+
+MEDICAL RECORD TEXT:
+{pdf_text}
+
+Output ONLY the following structured format with these exact field labels. Do not output anything before or after this block:
+
+PRIMARY DIAGNOSIS:
+SECONDARY CONDITIONS:
+CURRENT MEDICATIONS:
+PATIENT AGE:
+PATIENT SEX:
+RECENT LAB VALUES:
+RECENT PROCEDURES:
+ALLERGIES:
+EXCLUSION FLAGS:
+
+If any field is not found write NOT FOUND for that field. No commentary or extra text."""
+
+
 # ── EXTRACTION_PROMPT ────────────────────────────────────────────────────────
-# Used with vision (PDF page images). Extracts structured medical profile.
+# Fallback: used with vision (PDF page images) when text extraction fails.
+# Only reached for scanned / image-only PDFs.
 
 EXTRACTION_PROMPT = """You are a medical records analyst. Carefully examine the medical document shown in the image and extract the following information. Only extract information that is explicitly visible in the document. Never guess, infer, or fabricate information that is not clearly written.
 

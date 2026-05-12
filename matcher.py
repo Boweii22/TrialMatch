@@ -1,7 +1,7 @@
 import re
 
-from utils import stream_response
-from prompts import MATCHING_PROMPT, DISQUALIFIER_PROMPT
+from utils import TOKENS, stream_response
+from prompts import MATCHING_PROMPT
 
 _MAX_ELIGIBILITY_CHARS = 1500
 
@@ -40,11 +40,7 @@ def _parse_match_response(text):
 def match_patient_to_trial(patient_profile, clinical_reasoning, trial):
     """
     Match a patient to a single trial.
-
     trial must be a clean dict as returned by trial_fetcher.fetch_trials().
-    For NO/PARTIAL verdicts, also runs DISQUALIFIER_PROMPT to cite exact
-    criteria lines the patient fails.
-
     Returns a rich dict with all fields needed by app.py and extras.py.
     """
     # ── Read clean fields from pre-extracted trial dict ──────────────────────
@@ -63,24 +59,12 @@ def match_patient_to_trial(patient_profile, clinical_reasoning, trial):
             clinical_reasoning  = clinical_reasoning,
             eligibility_criteria = eligibility_text,
         )
-        raw    = stream_response([{"role": "user", "content": prompt}])
+        raw    = stream_response(
+            [{"role": "user", "content": prompt}],
+            max_tokens=TOKENS["match"],
+        )
         parsed = _parse_match_response(raw)
-
-        # ── Disqualifier detail for NO / PARTIAL ─────────────────────────────
-        disqualifier_detail = ""
-        if parsed["verdict"] in ("NO", "PARTIAL"):
-            print(f"[matcher] Running disqualifier analysis (verdict={parsed['verdict']})...")
-            try:
-                dq_prompt = DISQUALIFIER_PROMPT.format(
-                    patient_profile      = patient_profile,
-                    eligibility_criteria = eligibility_text,
-                    verdict              = parsed["verdict"],
-                )
-                disqualifier_detail = stream_response(
-                    [{"role": "user", "content": dq_prompt}]
-                )
-            except Exception as e:
-                disqualifier_detail = f"[detailed analysis unavailable: {e}]"
+        disqualifier_detail = ""   # removed second LLM call — MATCHING_PROMPT disqualifiers used directly
 
         return {
             "trial_title":        title,

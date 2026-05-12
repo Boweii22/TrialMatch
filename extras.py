@@ -1,4 +1,4 @@
-from utils import stream_response
+from utils import TOKENS, stream_response
 from prompts import EMAIL_DRAFT_PROMPT, URDU_EXPLAIN_PROMPT, TRANSLATION_PROMPT
 
 _TRANSLATABLE_FIELDS = ("reason", "next_step", "disqualifiers")
@@ -44,7 +44,7 @@ def translate_matches(matches, language):
                 language=language,
                 text="\n".join(batch_lines),
             )
-            out = stream_response([{"role": "user", "content": prompt}])
+            out = stream_response([{"role": "user", "content": prompt}], max_tokens=TOKENS["translate"])
 
             # Parse translated fields back by their preserved English labels
             for line in out.split("\n"):
@@ -140,7 +140,7 @@ def generate_inquiry_email(patient_profile, trial_result):
             reason         = trial_result.get("reason",      ""),
             patient_profile = profile_summary,
         )
-        result = stream_response([{"role": "user", "content": prompt}])
+        result = stream_response([{"role": "user", "content": prompt}], max_tokens=TOKENS["email"])
         return result if result else "ERROR: Model returned an empty email draft."
 
     except Exception as e:
@@ -163,7 +163,7 @@ def explain_in_urdu(results_text):
         prompt = URDU_EXPLAIN_PROMPT.format(
             results_text=results_text[:_MAX_RESULTS_FOR_URDU]
         )
-        result = stream_response([{"role": "user", "content": prompt}])
+        result = stream_response([{"role": "user", "content": prompt}], max_tokens=TOKENS["urdu"])
         return result if result else "ERROR: Model returned an empty Urdu explanation."
     except Exception as e:
         return f"ERROR: Could not generate Urdu explanation: {e}"

@@ -102,7 +102,7 @@ def _extract_trial(study):
         }
 
 
-def fetch_trials(condition_keyword, max_results=10):
+def fetch_trials(condition_keyword, max_results=5):
     """
     Fetch up to max_results recruiting clinical trials for condition_keyword.
     Returns a list of clean trial dicts (see _extract_trial for field names).
