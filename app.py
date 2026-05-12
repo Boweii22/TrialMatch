@@ -149,6 +149,19 @@ label span {
 @keyframes confGrow { from { width:0%; opacity:0.3; } to { width:var(--pct); opacity:1; } }
 .conf-fill { animation: confGrow 1s cubic-bezier(0.16,1,0.3,1) 0.15s forwards; }
 
+/* ── Toast notification ─────────────────────────────────────────────────── */
+@keyframes tmSlideIn  { from { transform:translateX(120%); opacity:0; } to { transform:translateX(0); opacity:1; } }
+@keyframes tmSlideOut { from { transform:translateX(0);    opacity:1; } to { transform:translateX(120%); opacity:0; } }
+#tm-toast {
+    position:fixed; top:24px; right:24px; z-index:9999;
+    padding:14px 20px; border-radius:14px;
+    box-shadow:0 8px 32px rgba(0,0,0,0.28), 0 0 0 1px rgba(255,255,255,0.08);
+    font-family:system-ui,sans-serif; font-size:0.88rem; font-weight:600;
+    max-width:320px; display:flex; align-items:center; gap:13px;
+    animation: tmSlideIn 0.45s cubic-bezier(0.16,1,0.3,1) forwards;
+    cursor:pointer;
+}
+
 /* ── Status pulse ───────────────────────────────────────────────────────── */
 @keyframes pulse {
     0%,100% { opacity:1; transform:scale(1); }
@@ -178,7 +191,7 @@ label span {
 
 _THEME_JS = """
 () => {
-    // Apply saved / OS preference immediately so the page doesn't flash
+    // ── Theme ──────────────────────────────────────────────────────────────
     const saved  = localStorage.getItem('tm-theme');
     const osDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
     const isDark = saved === 'dark' || (!saved && osDark);
@@ -197,9 +210,71 @@ _THEME_JS = """
             this.textContent = dark ? '☀  Light' : '☾  Dark';
         });
     };
-
     wire();
     new MutationObserver(wire).observe(document.body, { childList: true, subtree: true });
+
+    // ── Notifications (in-app toast + optional desktop) ────────────────────
+    if ('Notification' in window && Notification.permission === 'default') {
+        Notification.requestPermission();
+    }
+
+    const showToast = (emoji, heading, body, isError) => {
+        const old = document.getElementById('tm-toast');
+        if (old) old.remove();
+
+        const bg     = isError ? '#b91c1c'  : '#065f46';
+        const border = isError ? '#fca5a5'  : '#6ee7b7';
+
+        const t = document.createElement('div');
+        t.id = 'tm-toast';
+        t.style.background = bg;
+        t.style.border     = '1.5px solid ' + border;
+        t.innerHTML =
+            '<span style="font-size:1.6rem;flex-shrink:0;line-height:1;">' + emoji + '</span>' +
+            '<div>' +
+              '<div style="color:#fff;font-weight:700;margin-bottom:3px;">' + heading + '</div>' +
+              '<div style="color:rgba(255,255,255,0.85);font-size:0.8rem;font-weight:400;line-height:1.45;">' + body + '</div>' +
+            '</div>' +
+            '<span style="margin-left:auto;color:rgba(255,255,255,0.5);font-size:1.1rem;flex-shrink:0;padding-left:8px;">✕</span>';
+
+        t.addEventListener('click', () => {
+            t.style.animation = 'tmSlideOut 0.3s ease forwards';
+            setTimeout(() => t.remove(), 300);
+        });
+        document.body.appendChild(t);
+
+        setTimeout(() => {
+            if (!document.getElementById('tm-toast')) return;
+            t.style.animation = 'tmSlideOut 0.3s ease forwards';
+            setTimeout(() => t.remove(), 300);
+        }, 8000);
+
+        if ('Notification' in window && Notification.permission === 'granted') {
+            new Notification(heading, { body });
+        }
+    };
+
+    let notifyWired = false;
+    const wireNotify = () => {
+        const el = document.getElementById('tm-status');
+        if (!el || notifyWired) return;
+        notifyWired = true;
+        new MutationObserver(() => {
+            const txt = el.innerText || '';
+            if (txt.includes('Step 1/4')) {
+                delete el.dataset.notified;
+            } else if (txt.includes('Analysis complete') && !el.dataset.notified) {
+                el.dataset.notified = '1';
+                showToast('✅', 'TrialMatch — Done!', 'Your trial matching is complete. Results are ready below.', false);
+            } else if (txt.includes('ERROR:') && !el.dataset.notified) {
+                el.dataset.notified = '1';
+                showToast('❌', 'TrialMatch — Error', 'An error occurred. Check the status box for details.', true);
+            }
+        }).observe(el, { childList: true, subtree: true, characterData: true });
+    };
+    wireNotify();
+    new MutationObserver(wireNotify).observe(document.body, { childList: true, subtree: true });
+
     return [];
 }
 """
@@ -303,13 +378,16 @@ def _msg_html(text, level="info"):
     )
 
 
-def _status_html(text, done=False):
+def _status_html(text, done=False, warn=False):
     if not text:
         return ""
-    border = "var(--green-bd)" if done else "var(--border)"
-    bg     = "var(--green-bg)" if done else "var(--surface-2)"
-    icon   = "✓" if done else "▶"
-    dot_color = "var(--green)" if done else "var(--accent)"
+    no_spinner = done or warn
+    if done:
+        border, bg, icon, dot_color = "var(--green-bd)", "var(--green-bg)", "✓", "var(--green)"
+    elif warn:
+        border, bg, icon, dot_color = "var(--amber-bd)", "var(--amber-bg)", "⚠", "var(--amber)"
+    else:
+        border, bg, icon, dot_color = "var(--border)", "var(--surface-2)", "▶", "var(--accent)"
 
     lines = [l.strip() for l in text.split("\n") if l.strip()]
     rows  = []
@@ -333,7 +411,7 @@ def _status_html(text, done=False):
                 f'{line}</div>'
             )
 
-    spinner = "" if done else (
+    spinner = "" if no_spinner else (
         f'<div style="margin-top:12px;display:flex;align-items:center;gap:8px;">'
         f'<span style="display:inline-block;width:7px;height:7px;background:var(--accent);'
         f'border-radius:50%;animation:pulse 1.2s ease-in-out infinite;"></span>'
@@ -454,10 +532,11 @@ def _format_results_html(matches, total_trials, key_flags=None):
         verdict_icon  = "✅" if verdict == "MATCH" else "⚠️" if verdict == "PARTIAL" else "❌"
         verdict_label = f"{verdict_icon} {verdict}"
 
-        # Phase / sponsor chips
-        phase   = m.get("phase",   "")
-        sponsor = m.get("sponsor", "")
-        chips   = ""
+        # Phase / sponsor / completion date chips
+        phase           = m.get("phase",           "")
+        sponsor         = m.get("sponsor",         "")
+        completion_date = m.get("completion_date", "")
+        chips = ""
         if phase and phase != "Not specified":
             chips += (
                 f'<span style="background:var(--accent-bg);color:var(--accent);'
@@ -470,6 +549,12 @@ def _format_results_html(matches, total_trials, key_flags=None):
                 f'<span style="background:var(--surface-2);color:var(--text-2);'
                 f'padding:2px 9px;border-radius:20px;font-size:0.73rem;font-weight:600;">'
                 f'{sp}</span> '
+            )
+        if completion_date:
+            chips += (
+                f'<span style="background:var(--surface-2);color:var(--text-3);'
+                f'padding:2px 9px;border-radius:20px;font-size:0.73rem;font-weight:600;">'
+                f'📅 {completion_date}</span> '
             )
 
         # Criterion table
@@ -691,10 +776,10 @@ def check_system():
 
 def run_trialmatch(pdf_file, condition, language):
     if pdf_file is None:
-        yield _status_html("Please upload a PDF file."), "", "", ""
+        yield _status_html("⚠  Please upload a PDF file before running.", warn=True), "", "", ""
         return
     if not condition or not condition.strip():
-        yield _status_html("Please enter a condition keyword (e.g. 'type 2 diabetes')."), "", "", ""
+        yield _status_html("⚠  Please enter a condition keyword (e.g. 'type 2 diabetes').", warn=True), "", "", ""
         return
 
     condition = condition.strip()
@@ -866,7 +951,7 @@ with gr.Blocks(title="TrialMatch") as demo:
 
                 # ── Right: outputs ─────────────────────────────────────────────
                 with gr.Column(scale=2, min_width=380):
-                    status_box   = gr.HTML(value=_STATUS_PLACEHOLDER)
+                    status_box   = gr.HTML(value=_STATUS_PLACEHOLDER, elem_id="tm-status")
                     results_html = gr.HTML(value=_RESULTS_PLACEHOLDER)
 
                     with gr.Accordion("📧  Draft Inquiry Emails  (MATCH verdicts only)", open=False):
