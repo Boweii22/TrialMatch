@@ -917,7 +917,7 @@ with gr.Blocks(title="TrialMatch") as demo:
                 'font-size:0.88rem;margin-bottom:14px;">'
                 'Verify that Ollama is running and '
                 '<code style="background:var(--surface-2);padding:2px 6px;border-radius:4px;">'
-                'gemma3:4b</code> is installed before running the analysis.</p>'
+                'gemma4:e4b</code> is installed before running the analysis.</p>'
             )
             check_btn    = gr.Button("Check System", variant="secondary")
             check_output = gr.HTML(

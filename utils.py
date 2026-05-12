@@ -1,6 +1,6 @@
 import ollama
 
-MODEL = "gemma3:4b"
+MODEL = "gemma4:e4b"
 
 # Per-call token budgets — keeps each LLM call short and predictable.
 # Ollama's num_predict caps new tokens generated (not context window).
