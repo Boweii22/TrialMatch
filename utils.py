@@ -5,12 +5,12 @@ MODEL = "gemma4:e4b"
 # Per-call token budgets — keeps each LLM call short and predictable.
 # Ollama's num_predict caps new tokens generated (not context window).
 TOKENS = {
-    "extract":   450,   # vision pass per page — needs room for 9 structured fields
-    "reason":    280,   # clinical reasoning summary
-    "match":     220,   # VERDICT / CONFIDENCE / REASON / DISQUALIFIERS / NEXT STEP
-    "email":     420,   # subject + body
-    "translate": 300,   # three labelled fields translated
-    "urdu":      600,   # full results explanation
+    "extract":   600,   # 9 structured fields — bumped from 450 to clear thinking overhead
+    "reason":    320,   # clinical reasoning summary
+    "match":     260,   # VERDICT / CONFIDENCE / REASON / DISQUALIFIERS / NEXT STEP
+    "email":     480,   # subject + body
+    "translate": 350,   # three labelled fields translated
+    "urdu":      700,   # full results explanation
 }
 
 
@@ -23,17 +23,11 @@ def stream_response(messages, max_tokens=None):
     """
     opts = {"num_predict": max_tokens} if max_tokens else {}
     response_text = ""
-    stream = ollama.chat(model=MODEL, messages=messages, stream=True, options=opts)
+    # think=False disables gemma4's internal reasoning phase so num_predict
+    # budget is spent entirely on the structured output we need.
+    stream = ollama.chat(model=MODEL, messages=messages, stream=True, think=False, options=opts)
     for chunk in stream:
-        try:
-            content = chunk.message.content
-            if content:
-                response_text += content
-        except AttributeError:
-            try:
-                content = chunk["message"]["content"]
-                if content:
-                    response_text += content
-            except (KeyError, TypeError):
-                pass
+        content = chunk.message.content
+        if content:
+            response_text += content
     return response_text.strip()
