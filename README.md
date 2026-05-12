@@ -68,14 +68,13 @@ Wait for the download to complete before continuing.
 
 ## How to Use
 
-1. Click the **System Check** tab first to confirm Ollama and the model are ready.
-2. Switch to the **Run Analysis** tab.
-3. Upload your medical records PDF using **Step 1**.
-4. Type your primary condition keyword in **Step 2** (e.g. `type 2 diabetes`).
-5. Click **▶ Run TrialMatch**.
-6. Watch the status box — the AI will read your records, search for trials, and match each one.  
-   **First run may take 7–10 minutes** on a CPU-only machine while the model processes each step. Subsequent runs are faster once the model is loaded.
-7. Results show each matching trial with a verdict, plain-English reason, and a next step.
+1. **Make sure Ollama is running.** It starts automatically on Windows. If not, open it from the Start menu or run `ollama serve` in a terminal.
+2. **Run the app.** In Command Prompt inside the TrialMatch folder: `python app.py`, then open `http://127.0.0.1:7860` in your browser.
+3. **Run the System Check tab.** Click the ⚙️ System Check tab and press **Check System** — confirm Ollama is running and `gemma4:e4b` is found.
+4. **Upload the patient PDF.** Switch to the Run Analysis tab and upload your PDF (e.g. `ahmed_raza_medical_record.pdf`) in Step 1.
+5. **Type the condition.** In Step 2 enter a keyword such as `type 2 diabetes`.
+6. **Click ▶ Run TrialMatch and wait.** On a CPU-only machine this takes **7–10 minutes**. Do not close the window — watch the status messages update as each step completes.
+7. **Confirm results appear.** At least one MATCH or PARTIAL result should appear with a trial name, plain-English reason, and a next step.
 
 ---
 
