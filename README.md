@@ -5,6 +5,18 @@ TrialMatch matches your medical records to open clinical trials using a local AI
 
 ---
 
+## How It Works
+
+1. **PDF reading** — Extracts text directly from text-based PDFs using PyMuPDF, and falls back to image conversion for scanned or image-based PDFs. Processes up to 2 pages.
+2. **Profile extraction** — Gemma 4 reads the extracted text (or page images for scanned PDFs) and fills nine structured fields: Primary Diagnosis, Secondary Conditions, Current Medications, Patient Age, Patient Sex, Recent Lab Values, Recent Procedures, Allergies, and Exclusion Flags. Any field not found is recorded as NOT FOUND.
+3. **Clinical reasoning** — Gemma 4 produces a structured four-line clinical summary: Clinical Severity, Disease Stability, Key Clinical Factors, and Potential Concerns. This contextualises the raw extracted data and improves matching accuracy.
+4. **Trial fetch** — Queries the public ClinicalTrials.gov API for up to 5 recruiting trials matching the condition keyword, retrieving title, eligibility criteria, contact details, location, phase, sponsor, and estimated completion date.
+5. **Matching** — For each trial, Gemma 4 returns a MATCH / PARTIAL / NO verdict with a confidence score (0–100), a plain-English reason, and instructs Gemma 4 to reference the specific eligibility criterion that caused a disqualification — output quality depends on model behaviour.
+6. **Email draft** — For each MATCH verdict, generates a professional inquiry email pre-filled with the trial coordinator's contact details and a de-identified patient summary.
+7. **Translation** — Translates the reason, next step, and disqualifier fields into Urdu, Arabic, or French, preserving English for all medical codes and drug names.
+
+---
+
 ## Prerequisites
 
 ### 1. Install Python 3.10 or later

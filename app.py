@@ -252,7 +252,7 @@ _HEADER_HTML = """
     <span style="background:rgba(255,255,255,0.1);color:rgba(255,255,255,0.88);
                  padding:5px 12px;border-radius:20px;font-size:0.75rem;font-weight:600;
                  border:1px solid rgba(255,255,255,0.18);font-family:system-ui,sans-serif;
-                 letter-spacing:0.02em;">🤖 Gemma 3</span>
+                 letter-spacing:0.02em;">🤖 Gemma 4</span>
     <span style="background:rgba(255,255,255,0.1);color:rgba(255,255,255,0.88);
                  padding:5px 12px;border-radius:20px;font-size:0.75rem;font-weight:600;
                  border:1px solid rgba(255,255,255,0.18);font-family:system-ui,sans-serif;

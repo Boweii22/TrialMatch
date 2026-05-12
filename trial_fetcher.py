@@ -16,6 +16,7 @@ def _extract_trial(study):
         eligibility_mod = protocol.get("eligibilityModule", {})
         contacts_mod  = protocol.get("contactsLocationsModule", {})
         sponsor_mod   = protocol.get("sponsorCollaboratorsModule", {})
+        status_mod    = protocol.get("statusModule", {})
 
         # ── Core identity ────────────────────────────────────────────────────
         title  = id_mod.get("briefTitle", "Unknown Trial")
@@ -55,6 +56,11 @@ def _extract_trial(study):
         else:
             location = "See ClinicalTrials.gov"
 
+        # ── Estimated completion date ────────────────────────────────────────
+        completion_date = (
+            status_mod.get("primaryCompletionDate", {}).get("date", "")
+        )
+
         # ── Phase ────────────────────────────────────────────────────────────
         phases = design_mod.get("phases", [])
         phase  = phases[0] if phases else "Not specified"
@@ -74,6 +80,7 @@ def _extract_trial(study):
             "location":            location,
             "phase":               phase,
             "sponsor":             sponsor,
+            "completion_date":     completion_date,
         }
 
     except Exception as e:
@@ -99,6 +106,7 @@ def _extract_trial(study):
             "location":            "See ClinicalTrials.gov",
             "phase":               "Not specified",
             "sponsor":             "Unknown",
+            "completion_date":     "",
         }
 
 
