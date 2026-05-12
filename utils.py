@@ -5,12 +5,12 @@ MODEL = "gemma4:e4b"
 # Per-call token budgets — keeps each LLM call short and predictable.
 # Ollama's num_predict caps new tokens generated (not context window).
 TOKENS = {
-    "extract":   600,   # 9 structured fields — bumped from 450 to clear thinking overhead
-    "reason":    320,   # clinical reasoning summary
-    "match":     260,   # VERDICT / CONFIDENCE / REASON / DISQUALIFIERS / NEXT STEP
-    "email":     480,   # subject + body
-    "translate": 450,   # three labelled fields translated (bumped for Devanagari/Arabic script overhead)
-    "urdu":      700,   # full results explanation
+    "extract":      380,   # 13 fields (9 extraction + 4 reasoning) — one combined call
+    "match":        160,   # 5-line verdict block
+    "reason_chain": 100,   # 3-sentence reasoning chain
+    "email":        300,   # subject + brief body
+    "translate":    450,   # non-Latin script overhead kept
+    "urdu":         700,   # full results explanation
 }
 
 

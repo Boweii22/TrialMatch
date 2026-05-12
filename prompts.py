@@ -1,8 +1,9 @@
 # ── TEXT_EXTRACTION_PROMPT ───────────────────────────────────────────────────
 # Fast path: used when PyMuPDF can extract raw text directly from the PDF.
-# A single text-only LLM call replaces 2–3 slow vision calls.
+# Combined extract + clinical reasoning in one call — eliminates a second
+# round trip (prefill + generation overhead) that would read the same data twice.
 
-TEXT_EXTRACTION_PROMPT = """You are a medical records analyst. Read the following patient medical record text and extract the requested information. Only extract information explicitly present in the text. Never guess or fabricate.
+TEXT_EXTRACTION_PROMPT = """You are a medical records analyst and senior clinical physician. Read the following patient medical record text. Only use information explicitly present in the text. Never guess or fabricate.
 
 MEDICAL RECORD TEXT:
 {pdf_text}
@@ -18,15 +19,19 @@ RECENT LAB VALUES:
 RECENT PROCEDURES:
 ALLERGIES:
 EXCLUSION FLAGS:
+CLINICAL SEVERITY: [mild / moderate / severe / unknown]
+DISEASE STABILITY: [stable / unstable / unknown]
+KEY CLINICAL FACTORS: [2–3 concise bullet points most relevant to trial eligibility]
+POTENTIAL CONCERNS: [flags that might disqualify from trials, or NONE]
 
 If any field is not found write NOT FOUND for that field. No commentary or extra text."""
 
 
 # ── EXTRACTION_PROMPT ────────────────────────────────────────────────────────
 # Fallback: used with vision (PDF page images) when text extraction fails.
-# Only reached for scanned / image-only PDFs.
+# Also combined extract + clinical reasoning to keep parity with the text path.
 
-EXTRACTION_PROMPT = """You are a medical records analyst. Carefully examine the medical document shown in the image and extract the following information. Only extract information that is explicitly visible in the document. Never guess, infer, or fabricate information that is not clearly written.
+EXTRACTION_PROMPT = """You are a medical records analyst and senior clinical physician. Carefully examine the medical document shown in the image. Only extract information explicitly visible in the document. Never guess, infer, or fabricate.
 
 Output ONLY the following structured format with these exact field labels. Do not output anything before or after this block:
 
@@ -39,14 +44,19 @@ RECENT LAB VALUES:
 RECENT PROCEDURES:
 ALLERGIES:
 EXCLUSION FLAGS:
+CLINICAL SEVERITY: [mild / moderate / severe / unknown]
+DISEASE STABILITY: [stable / unstable / unknown]
+KEY CLINICAL FACTORS: [2–3 concise bullet points most relevant to trial eligibility]
+POTENTIAL CONCERNS: [flags that might disqualify from trials, or NONE]
 
-If any field is not found in the document write NOT FOUND for that field.
+If any field is not found write NOT FOUND for that field.
 Do not output any commentary, disclaimers, or text outside the structured format."""
 
 
 # ── REASONING_PROMPT ──────────────────────────────────────────────────────────
-# Text-only pass after extraction. Produces a clinical summary that improves
-# matching accuracy by contextualising the raw extracted data.
+# Kept for backwards compatibility but no longer called in the main pipeline.
+# The combined TEXT_EXTRACTION_PROMPT now produces both extraction + reasoning
+# in one call, eliminating a redundant round trip.
 
 REASONING_PROMPT = """You are a senior clinical physician reviewing an extracted patient profile.
 
@@ -85,6 +95,26 @@ CONFIDENCE: [integer from 0 to 100 representing how certain you are of the verdi
 REASON: [one sentence in plain English that a non-medical person can understand]
 DISQUALIFIERS: [exact reason from criteria text, or NONE]
 NEXT STEP: [one sentence on what the patient should do if interested in this trial]"""
+
+
+# ── REASONING_CHAIN_PROMPT ────────────────────────────────────────────────────
+# Called ONLY for MATCH / PARTIAL verdicts after the main matching loop.
+# Generates a compact step-by-step justification without slowing down the
+# primary pipeline (NO verdicts never trigger this call).
+
+REASONING_CHAIN_PROMPT = """You are a clinical trial eligibility screener explaining a verdict.
+
+VERDICT: {verdict} ({confidence}% confidence)
+
+PATIENT PROFILE:
+{patient_profile}
+
+TRIAL ELIGIBILITY CRITERIA:
+{eligibility_criteria}
+
+Write exactly 3 numbered steps explaining which specific eligibility criteria you checked and how the patient's data matched or did not match each one. Each step must be one concise sentence citing a specific value from the patient profile against the exact criterion text.
+
+Output only the 3 numbered steps. Nothing else."""
 
 
 # ── DISQUALIFIER_PROMPT ───────────────────────────────────────────────────────
