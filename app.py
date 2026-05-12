@@ -180,6 +180,123 @@ label span {
 ::-webkit-scrollbar-track { background: transparent; }
 ::-webkit-scrollbar-thumb { background: var(--border-2); border-radius: 2px; }
 
+/* ── Dark mode: override Gradio's own CSS variable set ──────────────────── */
+/* gr.themes.Soft() bakes in a light palette via these names.               */
+/* Re-declaring them on html.tm-dark makes every Gradio component respond.  */
+html.tm-dark {
+    --body-background-fill:            #070c18 !important;
+    --body-background-fill-secondary:  #0d1528 !important;
+    --block-background-fill:           #0d1528 !important;
+    --block-border-color:              rgba(255,255,255,0.06) !important;
+    --block-border-width:              1px !important;
+    --block-label-background-fill:     #111e33 !important;
+    --block-label-border-color:        rgba(255,255,255,0.06) !important;
+    --block-label-text-color:          #94a3b8 !important;
+    --block-title-text-color:          #e2e8f0 !important;
+    --block-info-text-color:           #94a3b8 !important;
+    --border-color-primary:            rgba(255,255,255,0.06) !important;
+    --border-color-accent:             rgba(255,255,255,0.12) !important;
+    --border-color-accent-subdued:     rgba(255,255,255,0.06) !important;
+    --color-accent:                    #60a5fa !important;
+    --color-accent-soft:               rgba(96,165,250,0.08) !important;
+    --input-background-fill:           #111e33 !important;
+    --input-background-fill-focus:     #111e33 !important;
+    --input-background-fill-hover:     #111e33 !important;
+    --input-border-color:              rgba(255,255,255,0.06) !important;
+    --input-border-color-focus:        #60a5fa !important;
+    --input-border-color-hover:        rgba(255,255,255,0.12) !important;
+    --input-placeholder-color:         #475569 !important;
+    --panel-background-fill:           #0d1528 !important;
+    --panel-border-color:              rgba(255,255,255,0.06) !important;
+    --section-header-text-color:       #94a3b8 !important;
+    --table-border-color:              rgba(255,255,255,0.06) !important;
+    --table-even-background-fill:      #111e33 !important;
+    --table-odd-background-fill:       #0d1528 !important;
+    --neutral-50:   #070c18 !important;  --neutral-100: #0d1528 !important;
+    --neutral-200:  #111e33 !important;  --neutral-300: rgba(255,255,255,0.08) !important;
+    --neutral-400:  #475569 !important;  --neutral-500: #64748b !important;
+    --neutral-600:  #94a3b8 !important;  --neutral-700: #cbd5e1 !important;
+    --neutral-800:  #e2e8f0 !important;  --neutral-900: #f1f5f9 !important;
+    --color-grey-50:  #070c18 !important; --color-grey-100: #0d1528 !important;
+    --color-grey-200: #111e33 !important;
+    --secondary-50: rgba(96,165,250,0.08) !important;
+    --secondary-100: rgba(96,165,250,0.12) !important;
+    --background-fill-primary:   #0d1528 !important;
+    --background-fill-secondary: #111e33 !important;
+}
+
+/* ── Dark mode: Gradio component-level overrides ────────────────────────── */
+/* These catch anything that ignores CSS variables and uses a hardcoded bg. */
+html.tm-dark .block,
+html.tm-dark .form,
+html.tm-dark .gap,
+html.tm-dark .padded,
+html.tm-dark .panel,
+html.tm-dark fieldset,
+html.tm-dark .contain,
+html.tm-dark .label-wrap,
+html.tm-dark .wrap.default {
+    background: var(--surface) !important;
+    border-color: var(--border) !important;
+    color: var(--text) !important;
+}
+
+/* File upload box */
+html.tm-dark .upload-container,
+html.tm-dark .file-preview-holder,
+html.tm-dark .file-count,
+html.tm-dark .dashed-border,
+html.tm-dark [data-testid="upload-box"],
+html.tm-dark .upload {
+    background: var(--surface-2) !important;
+    border-color: var(--border-2) !important;
+    color: var(--text-2) !important;
+}
+
+/* Dropdown options popup */
+html.tm-dark .options,
+html.tm-dark ul.options {
+    background: var(--surface) !important;
+    border: 1px solid var(--border-2) !important;
+    box-shadow: var(--shadow-lg) !important;
+}
+html.tm-dark .options li,
+html.tm-dark .options > * {
+    color: var(--text) !important;
+    background: transparent !important;
+}
+html.tm-dark .options li:hover,
+html.tm-dark .options > *:hover { background: var(--accent-bg) !important; }
+html.tm-dark .options li.selected,
+html.tm-dark .options > *.selected {
+    background: var(--accent-bg) !important;
+    color: var(--accent) !important;
+}
+
+/* Accordion inner content */
+html.tm-dark .accordion-content,
+html.tm-dark details > div,
+html.tm-dark .open > .inner {
+    background: var(--surface) !important;
+    border-color: var(--border) !important;
+}
+
+/* Misc text that stays dark */
+html.tm-dark span,
+html.tm-dark p,
+html.tm-dark div {
+    color: inherit;
+}
+html.tm-dark .prose,
+html.tm-dark .prose p { color: var(--text-2) !important; }
+
+/* SVG icons in Gradio buttons / inputs */
+html.tm-dark button svg,
+html.tm-dark .icon svg {
+    color: var(--text-2) !important;
+    stroke: var(--text-2) !important;
+}
+
 """
 
 # ─────────────────────────────────────────────────────────────────────────────
