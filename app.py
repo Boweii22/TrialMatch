@@ -1027,6 +1027,322 @@ _RESULTS_PLACEHOLDER = (
 )
 
 # ─────────────────────────────────────────────────────────────────────────────
+# Privacy & Trust panel HTML
+# ─────────────────────────────────────────────────────────────────────────────
+
+_PRIVACY_HTML = """
+<div style="font-family:system-ui,sans-serif;max-width:900px;margin:0 auto;">
+
+  <!-- Hero banner -->
+  <div style="background:linear-gradient(135deg,#022c22 0%,#064e3b 55%,#065f46 100%);
+              border-radius:16px;padding:32px 36px;margin-bottom:28px;text-align:center;
+              box-shadow:0 12px 40px rgba(0,0,0,0.35);">
+    <div style="font-size:2.8rem;margin-bottom:14px;">🔒</div>
+    <div style="color:#fff;font-size:1.5rem;font-weight:800;letter-spacing:-0.03em;margin-bottom:10px;">
+      Your medical data never leaves your device
+    </div>
+    <div style="color:rgba(255,255,255,0.72);font-size:0.92rem;line-height:1.6;max-width:580px;margin:0 auto;">
+      TrialMatch runs the entire AI pipeline locally on your computer.
+      Your records, your diagnosis, your analysis — all processed offline.
+    </div>
+  </div>
+
+  <!-- Data flow: two columns -->
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:18px;margin-bottom:28px;">
+
+    <!-- Stays on device -->
+    <div style="background:var(--green-bg);border:1.5px solid var(--green-bd);
+                border-left:4px solid var(--green);border-radius:14px;padding:24px;">
+      <div style="display:flex;align-items:center;gap:10px;margin-bottom:18px;">
+        <span style="font-size:1.5rem;">💻</span>
+        <div>
+          <div style="font-weight:800;color:var(--green);font-size:0.8rem;
+                      text-transform:uppercase;letter-spacing:0.08em;">Stays on your device</div>
+          <div style="color:var(--text-3);font-size:0.75rem;margin-top:2px;">Never transmitted anywhere</div>
+        </div>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:11px;">
+        <div style="display:flex;gap:11px;align-items:flex-start;">
+          <span style="color:var(--green);font-weight:700;flex-shrink:0;margin-top:1px;">✓</span>
+          <div>
+            <div style="font-weight:600;color:var(--text);font-size:0.87rem;">Your PDF medical record</div>
+            <div style="color:var(--text-3);font-size:0.78rem;margin-top:2px;">Read locally by PyMuPDF — never uploaded</div>
+          </div>
+        </div>
+        <div style="display:flex;gap:11px;align-items:flex-start;">
+          <span style="color:var(--green);font-weight:700;flex-shrink:0;margin-top:1px;">✓</span>
+          <div>
+            <div style="font-weight:600;color:var(--text);font-size:0.87rem;">Extracted patient profile</div>
+            <div style="color:var(--text-3);font-size:0.78rem;margin-top:2px;">Diagnosis, medications, lab values, age — all local</div>
+          </div>
+        </div>
+        <div style="display:flex;gap:11px;align-items:flex-start;">
+          <span style="color:var(--green);font-weight:700;flex-shrink:0;margin-top:1px;">✓</span>
+          <div>
+            <div style="font-weight:600;color:var(--text);font-size:0.87rem;">All Gemma 4 AI processing</div>
+            <div style="color:var(--text-3);font-size:0.78rem;margin-top:2px;">Runs via Ollama at localhost:11434 — no cloud AI</div>
+          </div>
+        </div>
+        <div style="display:flex;gap:11px;align-items:flex-start;">
+          <span style="color:var(--green);font-weight:700;flex-shrink:0;margin-top:1px;">✓</span>
+          <div>
+            <div style="font-weight:600;color:var(--text);font-size:0.87rem;">Matching results & confidence scores</div>
+            <div style="color:var(--text-3);font-size:0.78rem;margin-top:2px;">MATCH / PARTIAL / NO verdicts computed locally</div>
+          </div>
+        </div>
+        <div style="display:flex;gap:11px;align-items:flex-start;">
+          <span style="color:var(--green);font-weight:700;flex-shrink:0;margin-top:1px;">✓</span>
+          <div>
+            <div style="font-weight:600;color:var(--text);font-size:0.87rem;">Clinical reasoning summary</div>
+            <div style="color:var(--text-3);font-size:0.78rem;margin-top:2px;">Severity, stability, key flags — generated on-device</div>
+          </div>
+        </div>
+        <div style="display:flex;gap:11px;align-items:flex-start;">
+          <span style="color:var(--green);font-weight:700;flex-shrink:0;margin-top:1px;">✓</span>
+          <div>
+            <div style="font-weight:600;color:var(--text);font-size:0.87rem;">Email drafts</div>
+            <div style="color:var(--text-3);font-size:0.78rem;margin-top:2px;">Written by local Gemma 4 — not sent automatically</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Sent to internet -->
+    <div style="background:var(--info-bg);border:1.5px solid var(--info-bd);
+                border-left:4px solid var(--info);border-radius:14px;padding:24px;">
+      <div style="display:flex;align-items:center;gap:10px;margin-bottom:18px;">
+        <span style="font-size:1.5rem;">🌐</span>
+        <div>
+          <div style="font-weight:800;color:var(--info);font-size:0.8rem;
+                      text-transform:uppercase;letter-spacing:0.08em;">Sent to the internet</div>
+          <div style="color:var(--text-3);font-size:0.75rem;margin-top:2px;">One call only — no personal data</div>
+        </div>
+      </div>
+      <!-- Single item -->
+      <div style="background:var(--surface);border:1px solid var(--border);
+                  border-radius:10px;padding:16px;margin-bottom:16px;">
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;">
+          <span style="font-size:1rem;">🔍</span>
+          <span style="font-weight:700;color:var(--text);font-size:0.88rem;">Condition keyword only</span>
+        </div>
+        <div style="background:var(--surface-2);border-radius:6px;padding:8px 12px;
+                    font-family:monospace;font-size:0.82rem;color:var(--accent);
+                    border:1px solid var(--border);margin-bottom:8px;">
+          e.g. &quot;type 2 diabetes&quot;
+        </div>
+        <div style="color:var(--text-3);font-size:0.78rem;line-height:1.5;">
+          Sent to <strong style="color:var(--text-2);">ClinicalTrials.gov</strong> — the US government's public
+          clinical trial database. HTTPS encrypted. No authentication. No personal data attached.
+        </div>
+      </div>
+      <!-- What is NOT sent -->
+      <div style="border-top:1px solid var(--border);padding-top:14px;">
+        <div style="font-size:0.75rem;font-weight:700;color:var(--text-3);
+                    text-transform:uppercase;letter-spacing:0.08em;margin-bottom:10px;">
+          Never included in that request:
+        </div>
+        <div style="display:flex;flex-direction:column;gap:6px;">
+          <div style="display:flex;gap:8px;align-items:center;">
+            <span style="color:var(--red);font-weight:700;font-size:0.8rem;">✗</span>
+            <span style="color:var(--text-2);font-size:0.82rem;">Your name or identity</span>
+          </div>
+          <div style="display:flex;gap:8px;align-items:center;">
+            <span style="color:var(--red);font-weight:700;font-size:0.8rem;">✗</span>
+            <span style="color:var(--text-2);font-size:0.82rem;">Your age, sex, or diagnosis details</span>
+          </div>
+          <div style="display:flex;gap:8px;align-items:center;">
+            <span style="color:var(--red);font-weight:700;font-size:0.8rem;">✗</span>
+            <span style="color:var(--text-2);font-size:0.82rem;">Your medications or lab values</span>
+          </div>
+          <div style="display:flex;gap:8px;align-items:center;">
+            <span style="color:var(--red);font-weight:700;font-size:0.8rem;">✗</span>
+            <span style="color:var(--text-2);font-size:0.82rem;">Any AI outputs or match results</span>
+          </div>
+          <div style="display:flex;gap:8px;align-items:center;">
+            <span style="color:var(--red);font-weight:700;font-size:0.8rem;">✗</span>
+            <span style="color:var(--text-2);font-size:0.82rem;">Your PDF file or any part of it</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Architecture diagram -->
+  <div style="background:var(--surface);border:1.5px solid var(--border);
+              border-radius:14px;padding:24px;margin-bottom:28px;">
+    <div style="font-weight:800;color:var(--text);font-size:0.88rem;
+                text-transform:uppercase;letter-spacing:0.08em;margin-bottom:20px;">
+      🏗️ Architecture — how data flows
+    </div>
+    <div style="display:flex;align-items:center;justify-content:center;
+                flex-wrap:wrap;gap:8px;margin-bottom:20px;">
+
+      <div style="background:var(--surface-2);border:1.5px solid var(--border-2);
+                  border-radius:10px;padding:14px 18px;text-align:center;min-width:130px;">
+        <div style="font-size:1.4rem;margin-bottom:6px;">📄</div>
+        <div style="font-weight:700;color:var(--text);font-size:0.83rem;">Your PDF</div>
+        <div style="color:var(--text-3);font-size:0.72rem;margin-top:3px;">Local file</div>
+      </div>
+
+      <div style="color:var(--text-3);font-size:1.4rem;font-weight:300;">→</div>
+
+      <div style="background:var(--accent-bg);border:1.5px solid var(--accent);
+                  border-radius:10px;padding:14px 18px;text-align:center;min-width:160px;">
+        <div style="font-size:1.4rem;margin-bottom:6px;">🤖</div>
+        <div style="font-weight:700;color:var(--accent);font-size:0.83rem;">Gemma 4 via Ollama</div>
+        <div style="color:var(--text-3);font-size:0.72rem;margin-top:3px;">localhost:11434</div>
+      </div>
+
+      <div style="color:var(--text-3);font-size:1.4rem;font-weight:300;">→</div>
+
+      <div style="background:var(--green-bg);border:1.5px solid var(--green-bd);
+                  border-radius:10px;padding:14px 18px;text-align:center;min-width:130px;">
+        <div style="font-size:1.4rem;margin-bottom:6px;">📊</div>
+        <div style="font-weight:700;color:var(--green);font-size:0.83rem;">Results</div>
+        <div style="color:var(--text-3);font-size:0.72rem;margin-top:3px;">Displayed locally</div>
+      </div>
+    </div>
+
+    <!-- ClinicalTrials branch -->
+    <div style="display:flex;align-items:center;justify-content:center;gap:8px;">
+      <div style="width:1px;height:24px;background:var(--border-2);margin-left:calc(50% - 80px);"></div>
+    </div>
+    <div style="display:flex;justify-content:center;">
+      <div style="background:var(--info-bg);border:1.5px solid var(--info-bd);
+                  border-radius:10px;padding:12px 20px;text-align:center;max-width:300px;">
+        <div style="font-size:1.1rem;margin-bottom:4px;">🔍</div>
+        <div style="font-weight:700;color:var(--info);font-size:0.82rem;">ClinicalTrials.gov API</div>
+        <div style="color:var(--text-3);font-size:0.72rem;margin-top:3px;">
+          Keyword only · HTTPS · US gov public database
+        </div>
+      </div>
+    </div>
+    <div style="margin-top:14px;padding-top:14px;border-top:1px solid var(--border);
+                color:var(--text-3);font-size:0.78rem;text-align:center;line-height:1.6;">
+      Gemma 4 performs <strong style="color:var(--text-2);">three separate local inferences</strong>:
+      extraction → clinical reasoning → eligibility matching.
+      None of these calls leave your machine.
+    </div>
+  </div>
+
+  <!-- Safety checklist -->
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:18px;margin-bottom:28px;">
+    <div style="background:var(--surface);border:1.5px solid var(--border);border-radius:14px;padding:22px;">
+      <div style="font-weight:800;color:var(--text);font-size:0.85rem;
+                  margin-bottom:16px;text-transform:uppercase;letter-spacing:0.06em;">
+        🛡️ Privacy guarantees
+      </div>
+      <div style="display:flex;flex-direction:column;gap:10px;">
+        <div style="display:flex;gap:10px;align-items:flex-start;">
+          <span style="color:var(--green);font-weight:800;flex-shrink:0;">✓</span>
+          <span style="color:var(--text-2);font-size:0.85rem;">No account or sign-in required</span>
+        </div>
+        <div style="display:flex;gap:10px;align-items:flex-start;">
+          <span style="color:var(--green);font-weight:800;flex-shrink:0;">✓</span>
+          <span style="color:var(--text-2);font-size:0.85rem;">No data stored between sessions</span>
+        </div>
+        <div style="display:flex;gap:10px;align-items:flex-start;">
+          <span style="color:var(--green);font-weight:800;flex-shrink:0;">✓</span>
+          <span style="color:var(--text-2);font-size:0.85rem;">No analytics, telemetry, or logging</span>
+        </div>
+        <div style="display:flex;gap:10px;align-items:flex-start;">
+          <span style="color:var(--green);font-weight:800;flex-shrink:0;">✓</span>
+          <span style="color:var(--text-2);font-size:0.85rem;">No OpenAI, Anthropic, or any cloud AI</span>
+        </div>
+        <div style="display:flex;gap:10px;align-items:flex-start;">
+          <span style="color:var(--green);font-weight:800;flex-shrink:0;">✓</span>
+          <span style="color:var(--text-2);font-size:0.85rem;">Fully offline-capable (AI processing)</span>
+        </div>
+        <div style="display:flex;gap:10px;align-items:flex-start;">
+          <span style="color:var(--green);font-weight:800;flex-shrink:0;">✓</span>
+          <span style="color:var(--text-2);font-size:0.85rem;">Open source — every line is auditable</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Verify yourself -->
+    <div style="background:var(--surface);border:1.5px solid var(--border);border-radius:14px;padding:22px;">
+      <div style="font-weight:800;color:var(--text);font-size:0.85rem;
+                  margin-bottom:16px;text-transform:uppercase;letter-spacing:0.06em;">
+        🔎 Verify it yourself
+      </div>
+      <div style="color:var(--text-3);font-size:0.78rem;margin-bottom:12px;line-height:1.5;">
+        Don't take our word for it. Watch the network traffic:
+      </div>
+      <div style="display:flex;flex-direction:column;gap:10px;">
+        <div style="display:flex;gap:10px;align-items:flex-start;">
+          <span style="background:var(--accent);color:#fff;border-radius:50%;
+                       width:20px;height:20px;display:inline-flex;align-items:center;
+                       justify-content:center;font-size:0.7rem;font-weight:700;flex-shrink:0;">1</span>
+          <span style="color:var(--text-2);font-size:0.83rem;">Press <strong>F12</strong> to open DevTools → Network tab</span>
+        </div>
+        <div style="display:flex;gap:10px;align-items:flex-start;">
+          <span style="background:var(--accent);color:#fff;border-radius:50%;
+                       width:20px;height:20px;display:inline-flex;align-items:center;
+                       justify-content:center;font-size:0.7rem;font-weight:700;flex-shrink:0;">2</span>
+          <span style="color:var(--text-2);font-size:0.83rem;">Upload a PDF and run the analysis</span>
+        </div>
+        <div style="display:flex;gap:10px;align-items:flex-start;">
+          <span style="background:var(--accent);color:#fff;border-radius:50%;
+                       width:20px;height:20px;display:inline-flex;align-items:center;
+                       justify-content:center;font-size:0.7rem;font-weight:700;flex-shrink:0;">3</span>
+          <span style="color:var(--text-2);font-size:0.83rem;">You will see <strong>exactly one</strong> external request — to <code style="background:var(--surface-2);padding:1px 5px;border-radius:4px;font-size:0.78rem;">clinicaltrials.gov</code></span>
+        </div>
+        <div style="display:flex;gap:10px;align-items:flex-start;">
+          <span style="background:var(--accent);color:#fff;border-radius:50%;
+                       width:20px;height:20px;display:inline-flex;align-items:center;
+                       justify-content:center;font-size:0.7rem;font-weight:700;flex-shrink:0;">4</span>
+          <span style="color:var(--text-2);font-size:0.83rem;">Inspect its URL — it contains only your keyword, nothing else</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Compliance note -->
+  <div style="background:var(--amber-bg);border:1px solid var(--amber-bd);
+              border-left:4px solid var(--amber);border-radius:10px;
+              padding:16px 20px;margin-bottom:24px;
+              display:flex;gap:14px;align-items:flex-start;">
+    <span style="font-size:1.3rem;flex-shrink:0;">⚠️</span>
+    <div>
+      <div style="font-weight:700;color:var(--amber);font-size:0.85rem;margin-bottom:4px;">
+        Designed for HIPAA-sensitive use cases
+      </div>
+      <div style="color:var(--text-2);font-size:0.82rem;line-height:1.6;">
+        Because no protected health information (PHI) leaves the device, TrialMatch is suitable
+        for deployment in clinical settings, research institutions, and privacy-regulated environments
+        where cloud AI tools cannot be used.
+        <strong style="color:var(--text);"> Always consult your institution's compliance team before use in a formal clinical workflow.</strong>
+      </div>
+    </div>
+  </div>
+
+  <!-- Track badge -->
+  <div style="display:flex;justify-content:center;gap:12px;flex-wrap:wrap;">
+    <div style="background:var(--surface-2);border:1px solid var(--border);
+                border-radius:20px;padding:8px 18px;
+                display:flex;align-items:center;gap:8px;">
+      <span style="font-size:1rem;">🏆</span>
+      <span style="font-weight:700;color:var(--text-2);font-size:0.8rem;">Safety &amp; Trust Track</span>
+    </div>
+    <div style="background:var(--surface-2);border:1px solid var(--border);
+                border-radius:20px;padding:8px 18px;
+                display:flex;align-items:center;gap:8px;">
+      <span style="font-size:1rem;">🏆</span>
+      <span style="font-weight:700;color:var(--text-2);font-size:0.8rem;">Health &amp; Sciences Track</span>
+    </div>
+    <div style="background:var(--surface-2);border:1px solid var(--border);
+                border-radius:20px;padding:8px 18px;
+                display:flex;align-items:center;gap:8px;">
+      <span style="font-size:1rem;">🔒</span>
+      <span style="font-weight:700;color:var(--text-2);font-size:0.8rem;">Gemma 4 Good Hackathon 2026</span>
+    </div>
+  </div>
+
+</div>
+"""
+
+# ─────────────────────────────────────────────────────────────────────────────
 # Gradio layout
 # ─────────────────────────────────────────────────────────────────────────────
 
@@ -1112,6 +1428,9 @@ with gr.Blocks(title="TrialMatch") as demo:
                     "}"
                 ),
             )
+
+        with gr.Tab("🔒  Privacy & Trust"):
+            gr.HTML(_PRIVACY_HTML)
 
         with gr.Tab("⚙️  System Check"):
             gr.HTML(
