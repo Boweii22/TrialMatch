@@ -83,7 +83,7 @@ Output ONLY the following five lines. Do not write anything before or after them
 VERDICT: [write MATCH if the patient clearly qualifies, PARTIAL if there is uncertainty, or NO if clearly does not qualify]
 CONFIDENCE: [integer from 0 to 100 representing how certain you are of the verdict]
 REASON: [one sentence in plain English that a non-medical person can understand]
-DISQUALIFIERS: [specific criteria the patient fails, or NONE if verdict is MATCH]
+DISQUALIFIERS: [exact reason from criteria text, or NONE]
 NEXT STEP: [one sentence on what the patient should do if interested in this trial]"""
 
 
