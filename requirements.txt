@@ -3,7 +3,7 @@
 # No GPU, no CUDA, no torch required.
 
 PyMuPDF==1.24.14
-gradio>=5.0.0
+gradio>=6.0.0
 requests==2.32.3
 Pillow>=11.0.0
 ollama==0.3.3

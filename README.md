@@ -29,9 +29,9 @@ TrialMatch matches your medical records to open clinical trials using a local AI
 ### 3. Download the Gemma 4 model
 Open **Command Prompt** and run:
 ```
-ollama pull gemma4:4b
+ollama pull gemma4:e4b
 ```
-This downloads the ~3 GB model file. Do this once; it is cached permanently.  
+This downloads the ~9.6 GB model file. Do this once; it is cached permanently.  
 Wait for the download to complete before continuing.
 
 ---
@@ -74,7 +74,7 @@ Wait for the download to complete before continuing.
 4. Type your primary condition keyword in **Step 2** (e.g. `type 2 diabetes`).
 5. Click **▶ Run TrialMatch**.
 6. Watch the status box — the AI will read your records, search for trials, and match each one.  
-   **First run may take 3–5 minutes** while the model loads into memory. Subsequent runs are faster.
+   **First run may take 7–10 minutes** on a CPU-only machine while the model processes each step. Subsequent runs are faster once the model is loaded.
 7. Results show each matching trial with a verdict, plain-English reason, and a next step.
 
 ---
@@ -85,14 +85,14 @@ Wait for the download to complete before continuing.
 - Make sure the Ollama application is open (look for it in the Windows system tray).
 - If not running, open Command Prompt and type `ollama serve` then try again.
 
-### "Model gemma4:4b not found"
-- Run `ollama pull gemma4:4b` in Command Prompt and wait for the download to finish.
-- The model is about 3 GB; check you have enough disk space.
+### "Model gemma4:e4b not found"
+- Run `ollama pull gemma4:e4b` in Command Prompt and wait for the download to finish.
+- The model is about 9.6 GB; check you have enough disk space.
 
 ### PDF read errors / blank profile
 - Make sure the PDF is not password-protected or encrypted.
 - Scanned PDFs (photos of pages) work best when the scan is clear and high-contrast.
-- The app processes a maximum of 3 pages — ensure the relevant medical information is on the first 3 pages.
+- The app processes a maximum of 2 pages — ensure the relevant medical information is on the first 2 pages.
 
 ### No trials returned
 - ClinicalTrials.gov requires an internet connection. Check you are online.
