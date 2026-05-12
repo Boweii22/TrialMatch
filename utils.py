@@ -9,7 +9,7 @@ TOKENS = {
     "reason":    320,   # clinical reasoning summary
     "match":     260,   # VERDICT / CONFIDENCE / REASON / DISQUALIFIERS / NEXT STEP
     "email":     480,   # subject + body
-    "translate": 350,   # three labelled fields translated
+    "translate": 450,   # three labelled fields translated (bumped for Devanagari/Arabic script overhead)
     "urdu":      700,   # full results explanation
 }
 

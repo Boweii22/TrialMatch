@@ -6,7 +6,7 @@ from trial_fetcher import fetch_trials
 from matcher import match_patient_to_trial
 from extras import generate_inquiry_email, translate_matches
 
-_LANGUAGES  = ["English", "Urdu", "Arabic", "French"]
+_LANGUAGES  = ["English", "Urdu", "Arabic", "Hindi", "Spanish", "French", "Swahili"]
 _RTL_LANGS  = {"Urdu", "Arabic"}
 
 # ─────────────────────────────────────────────────────────────────────────────

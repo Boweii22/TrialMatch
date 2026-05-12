@@ -2,7 +2,7 @@ from utils import TOKENS, stream_response
 from prompts import EMAIL_DRAFT_PROMPT, URDU_EXPLAIN_PROMPT, TRANSLATION_PROMPT
 
 _TRANSLATABLE_FIELDS = ("reason", "next_step", "disqualifiers")
-_LANGUAGES = ("English", "Urdu", "Arabic", "French")
+_LANGUAGES = ("English", "Urdu", "Arabic", "Hindi", "Spanish", "French", "Swahili")
 
 
 def translate_matches(matches, language):

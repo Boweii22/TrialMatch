@@ -158,6 +158,10 @@ Rules:
 - Use simple everyday language that a patient without medical education can understand
 - For Urdu: write in Nastaliq Urdu script
 - For Arabic: write in standard Arabic script
+- For Hindi: write in Devanagari script
+- For Spanish: use simple, everyday Latin American Spanish
+- For Swahili: use simple, everyday Kiswahili
+- For French: use simple, clear French accessible to a general audience
 - Return ONLY the translated labeled fields, nothing else
 
 Fields to translate:
