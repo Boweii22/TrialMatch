@@ -1170,9 +1170,22 @@ def run_trialmatch(pdf_file, condition, language):
 
     matches = sorted(matches, key=lambda m: m.get("confidence_score", 0), reverse=True)
 
+    results_html_str = _format_results_html(matches, total, key_flags)
+
+    # ── Translation runs automatically if the user selected a language ────────
+    translated_html = ""
+    if language != "English":
+        yield _status_html(f"🌐 Translating results to {language}…"), results_html_str, "", "", gr.update(visible=False), None
+        t0 = time.time()
+        try:
+            t_matches       = translate_matches(matches, language)
+            translated_html = _format_translated_html(t_matches, total, language, key_flags)
+        except Exception as e:
+            translated_html = _msg_html(f"Translation error: {e}", "error")
+        _timings["ai_translate"] = time.time() - t0
+
     _timings["total"] = time.time() - t_pipeline_start
     timing_card       = _format_timing_html(_timings)
-    results_html_str  = _format_results_html(matches, total, key_flags)
 
     # Store everything the enrichment function needs
     enrich_state = {
@@ -1189,8 +1202,8 @@ def run_trialmatch(pdf_file, condition, language):
         _status_html("Matching complete — click ✨ Generate Reasoning & Emails to enrich results.", done=True),
         timing_card + results_html_str,
         "",
-        "",
-        gr.update(visible=True),   # show the enrichment button
+        translated_html,
+        gr.update(visible=True),
         enrich_state,
     )
 
@@ -1260,22 +1273,6 @@ def generate_enrichment(state):
                        "Emails are drafted for MATCH verdicts only.\n"
                        "Consult your doctor for PARTIAL matches.")
 
-    # ── Translation ───────────────────────────────────────────────────────────
-    translated_html = ""
-    if language != "English":
-        yield (
-            _status_html(f"🌐 Translating results to {language}…"),
-            gr.update(), gr.update(), gr.update(),
-            gr.update(visible=False),
-        )
-        t0 = time.time()
-        try:
-            t_matches       = translate_matches(matches, language)
-            translated_html = _format_translated_html(t_matches, total, language, key_flags)
-        except Exception as e:
-            translated_html = _msg_html(f"Translation error: {e}", "error")
-        _timings["ai_translate"] = time.time() - t0
-
     _timings["total"] = _timings.get("total", 0) + (time.time() - t_enrich_start)
     timing_card       = _format_timing_html(_timings)
 
@@ -1283,8 +1280,8 @@ def generate_enrichment(state):
         _status_html("Analysis complete.", done=True),
         timing_card + results_html_str,
         emails_text,
-        translated_html,
-        gr.update(visible=False),   # hide button when done
+        gr.update(),               # translation already set by main pipeline — leave it
+        gr.update(visible=False),
     )
 
 
@@ -1688,8 +1685,8 @@ with gr.Blocks(title="TrialMatch") as demo:
                         gr.HTML(
                             '<p style="font-size:0.82rem;color:var(--text-3);margin:0 0 10px;'
                             'font-family:system-ui,sans-serif;">'
-                            'Select a non-English language above before running. '
-                            'Urdu and Arabic are displayed right-to-left.</p>'
+                            'Select a non-English language above then run the analysis. '
+                            'Translation happens automatically. Urdu and Arabic are displayed right-to-left.</p>'
                         )
                         translated_output = gr.HTML(value="")
 
