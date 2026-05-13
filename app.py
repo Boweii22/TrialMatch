@@ -3,7 +3,7 @@ import time
 import gradio as gr
 
 from profile_extractor import extract_patient_profile
-from trial_fetcher import fetch_trials
+from trial_fetcher import fetch_trials, db_exists
 from matcher import match_patient_to_trial, generate_reasoning_chain
 from extras import generate_inquiry_email, translate_matches
 
@@ -1124,7 +1124,8 @@ def run_trialmatch(pdf_file, condition, language):
     key_flags          = profile_data["key_flags"]
     _timings.update(profile_data.get("step_timings", {}))
 
-    yield _status_html("Step 2/4 — Searching ClinicalTrials.gov for open recruiting trials..."), "", "", "", gr.update(visible=False), None
+    _mode_label = "local database 🔌 offline" if db_exists() else "ClinicalTrials.gov 🌐 online"
+    yield _status_html(f"Step 2/4 — Searching {_mode_label} for recruiting trials..."), "", "", "", gr.update(visible=False), None
     t0 = time.time()
     try:
         trials = fetch_trials(condition, max_results=3)
@@ -1749,6 +1750,18 @@ with gr.Blocks(title="TrialMatch") as demo:
 
 if __name__ == "__main__":
     import socket
+    from trial_fetcher import db_exists
+    from download_trials_db import build_database
+
+    # ── First-launch setup ────────────────────────────────────────────────────
+    if not db_exists():
+        print()
+        print("Setting up TrialMatch for the first time...")
+        print("(This downloads the offline trial database — takes 2-3 minutes, happens once only)")
+        print()
+        for line in build_database():
+            print(line, flush=True)
+        print()
 
     def _find_free_port(start=7860, end=7880):
         for port in range(start, end + 1):
