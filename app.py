@@ -549,11 +549,13 @@ def _confidence_bar_html(confidence, bar_color, bar_light):
     return (
         f'<div style="margin:16px 0 12px;">'
         f'<div style="display:flex;justify-content:space-between;'
-        f'align-items:center;margin-bottom:7px;">'
+        f'align-items:center;margin-bottom:4px;">'
         f'<span style="font-size:0.69rem;font-weight:700;color:var(--text-3);'
         f'text-transform:uppercase;letter-spacing:0.1em;">Match Confidence</span>'
         f'<span style="font-size:0.92rem;font-weight:800;color:{bar_color};">'
         f'{confidence}%</span></div>'
+        f'<div style="font-size:0.71rem;color:var(--text-3);margin-bottom:8px;font-style:italic;">'
+        f'Confidence = % of eligibility criteria this patient appears to meet</div>'
         f'<div style="background:var(--surface-2);border-radius:8px;'
         f'height:8px;overflow:hidden;border:1px solid var(--border);">'
         f'<div class="conf-fill" style="--pct:{confidence}%;height:100%;'
@@ -810,7 +812,17 @@ def _format_results_html(matches, total_trials, key_flags=None):
                 f'</details>'
             )
         else:
-            reasoning_html = ""
+            reasoning_html = (
+                f'<div style="margin:14px 0 2px;padding:10px 14px;'
+                f'background:var(--surface-2);border:1px solid var(--border);'
+                f'border-radius:8px;display:flex;align-items:center;gap:9px;">'
+                f'<span style="font-size:1rem;">🧠</span>'
+                f'<span style="color:var(--text-3);font-size:0.81rem;font-style:italic;">'
+                f'Gemma 4 step-by-step reasoning — click '
+                f'<strong style="color:var(--text-2);font-style:normal;">'
+                f'✨ Generate Reasoning &amp; Emails</strong> above to reveal how this verdict was reached'
+                f'</span></div>'
+            )
 
         parts.append(f"""
 <div style="background:var(--surface);border-radius:var(--radius);margin:14px 0;
@@ -1823,6 +1835,29 @@ with gr.Blocks(title="TrialMatch") as demo:
                         'text-align:center;font-family:system-ui,sans-serif;">'
                         'First run takes 2–3 min while the model loads</p>'
                     )
+                    gr.HTML("""
+<div style="margin-top:14px;border:1px solid var(--border);border-radius:10px;
+            overflow:hidden;font-family:system-ui,sans-serif;font-size:0.77rem;">
+  <div style="background:var(--surface-2);padding:7px 12px;border-bottom:1px solid var(--border);
+              font-weight:700;color:var(--text-3);text-transform:uppercase;
+              letter-spacing:0.07em;font-size:0.68rem;">🔒 Data flow</div>
+  <div style="display:grid;grid-template-columns:1fr 1fr;">
+    <div style="padding:10px 12px;border-right:1px solid var(--border);">
+      <div style="color:var(--green);font-weight:700;margin-bottom:6px;">💻 Stays on device</div>
+      <div style="color:var(--text-3);line-height:1.7;">
+        PDF file<br>Medical profile<br>AI reasoning<br>Match results<br>Email drafts
+      </div>
+    </div>
+    <div style="padding:10px 12px;">
+      <div style="color:var(--info);font-weight:700;margin-bottom:6px;">🌐 Leaves device</div>
+      <div style="color:var(--text-3);line-height:1.7;">
+        Condition keyword only<br>
+        <span style="font-size:0.72rem;">→ ClinicalTrials.gov (HTTPS)</span><br>
+        <span style="color:var(--green);font-size:0.72rem;">No personal data. Ever.</span>
+      </div>
+    </div>
+  </div>
+</div>""")
 
                 # ── Right: outputs ─────────────────────────────────────────────
                 with gr.Column(scale=2, min_width=380):
