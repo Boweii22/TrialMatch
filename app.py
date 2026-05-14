@@ -947,27 +947,106 @@ def _check_row(status, message):
 
 
 def check_system():
+    import ollama as _ollama
     from utils import MODEL
     rows = []
+
+    # ── 1. Ollama running + version ───────────────────────────────────────────
+    ollama_version = ""
+    try:
+        v = requests.get("http://localhost:11434/api/version", timeout=5)
+        ollama_version = v.json().get("version", "")
+    except Exception:
+        pass
+
     try:
         resp = requests.get("http://localhost:11434/api/tags", timeout=5)
         resp.raise_for_status()
-        rows.append(_check_row("ok", "Ollama is running"))
-        installed = [m.get("name", "") for m in resp.json().get("models", [])]
-        if any(MODEL in n for n in installed):
-            rows.append(_check_row("ok", f"{MODEL} is installed — ready to run!"))
+        ver_label = f" v{ollama_version}" if ollama_version else ""
+        rows.append(_check_row("ok", f"Ollama{ver_label} — running"))
+
+        # ── 2. Model details ──────────────────────────────────────────────────
+        models_data = resp.json().get("models", [])
+        model_entry = next((m for m in models_data if MODEL in m.get("name", "")), None)
+        if model_entry:
+            size_gb = model_entry.get("size", 0) / (1024 ** 3)
+            details = model_entry.get("details", {})
+            quant   = details.get("quantization_level", "")
+            params  = details.get("parameter_size", "")
+            info    = "  ·  ".join(filter(None, [params, quant, f"{size_gb:.1f} GB on disk"]))
+            rows.append(_check_row("ok", f"{MODEL}  ·  {info}"))
         else:
-            rows.append(_check_row("error", f"{MODEL} not found.  Fix:  ollama pull {MODEL}"))
+            installed = [m.get("name", "") for m in models_data]
+            rows.append(_check_row("error", f"{MODEL} not found — run: ollama pull {MODEL}"))
             if installed:
                 rows.append(
                     f'<p style="font-size:0.82rem;color:var(--text-3);margin:0 0 4px 44px;'
-                    f'font-family:system-ui,sans-serif;">'
-                    f'Installed: {", ".join(installed)}</p>'
+                    f'font-family:system-ui,sans-serif;">Installed: {", ".join(installed)}</p>'
                 )
+            return f'<div style="padding:4px;">{"".join(rows)}</div>'
+
     except requests.exceptions.ConnectionError:
-        rows.append(_check_row("error", "Ollama is NOT running.  Fix:  ollama serve"))
+        rows.append(_check_row("error", "Ollama is NOT running — run: ollama serve"))
+        return f'<div style="padding:4px;">{"".join(rows)}</div>'
     except Exception as e:
-        rows.append(_check_row("warn", f"Could not check Ollama: {e}"))
+        rows.append(_check_row("warn", f"Could not reach Ollama: {e}"))
+        return f'<div style="padding:4px;">{"".join(rows)}</div>'
+
+    # ── 3. Live inference speed test ──────────────────────────────────────────
+    rows.append(
+        f'<div style="padding:8px 14px 8px 44px;font-size:0.81rem;'
+        f'color:var(--text-3);font-style:italic;font-family:system-ui,sans-serif;">'
+        f'Running live speed test (~10 s)…</div>'
+    )
+    try:
+        t0     = time.time()
+        stream = _ollama.chat(
+            model   = MODEL,
+            messages= [{"role": "user", "content": "List 3 fruits."}],
+            stream  = True,
+            think   = False,
+            options = {"num_predict": 25},
+        )
+        resp_text  = ""
+        last_chunk = None
+        for chunk in stream:
+            if chunk.message.content:
+                resp_text += chunk.message.content
+            last_chunk = chunk
+        elapsed = time.time() - t0
+
+        # Use Ollama's own eval stats when available (most accurate)
+        if (last_chunk
+                and getattr(last_chunk, "eval_count",    None)
+                and getattr(last_chunk, "eval_duration", None)
+                and last_chunk.eval_duration > 0):
+            tps       = last_chunk.eval_count / (last_chunk.eval_duration / 1e9)
+            tok_count = last_chunk.eval_count
+        else:
+            tok_count = max(1, len(resp_text) // 4)
+            tps       = tok_count / elapsed if elapsed > 0 else 0
+
+        rows.append(_check_row(
+            "ok",
+            f"Inference speed: {tps:.1f} tok/s  ·  {tok_count} tokens in {elapsed:.1f}s  ·  CPU-only"
+        ))
+        rows.append(
+            f'<div style="padding:4px 14px 12px 44px;font-size:0.79rem;'
+            f'color:var(--text-3);font-family:system-ui,sans-serif;line-height:1.55;">'
+            f'Running Gemma 4 locally via Ollama — no cloud, no API cost, '
+            f'no data leaving this machine. Full analysis: ~7–10 min on CPU.</div>'
+        )
+
+    except Exception as e:
+        err = str(e).lower()
+        if any(k in err for k in ("memory", "system memory", "out of memory")):
+            rows.append(_check_row(
+                "warn",
+                "Speed test skipped — not enough free RAM (~10 GB needed). Close other apps first."
+            ))
+        else:
+            rows.append(_check_row("warn", f"Speed test failed: {e}"))
+
     return f'<div style="padding:4px;">{"".join(rows)}</div>'
 
 
@@ -1158,7 +1237,11 @@ def run_trialmatch(pdf_file, condition, language):
     _timings.update(profile_data.get("step_timings", {}))
 
     _mode_label = "local database 🔌 offline" if db_exists() else "ClinicalTrials.gov 🌐 online"
-    yield _status_html(f"Step 2/4 — Searching {_mode_label} for recruiting trials..."), "", "", "", gr.update(visible=False), None
+    t1 = _timings.get("pdf_read", 0) + _timings.get("ai_extract", 0)
+    yield _status_html(
+        f"Step 2/4 — Searching {_mode_label} for recruiting trials...\n"
+        f"(Step 1 completed in {_fmt_time(t1)})"
+    ), "", "", "", gr.update(visible=False), None
     t0 = time.time()
     try:
         trials = fetch_trials(condition, max_results=3)
@@ -1178,10 +1261,14 @@ def run_trialmatch(pdf_file, condition, language):
     matches      = []
     total        = len(trials)
     t_match_acc  = 0.0
+    t_last_match = 0.0
     for i, trial in enumerate(trials):
         trial_title = trial.get("title", f"Trial {i + 1}")
         short       = trial_title[:72] + ("…" if len(trial_title) > 72 else "")
-        yield _status_html(f"Step 3/4 — Matching trial {i + 1} of {total}:\n{short}"), "", "", "", gr.update(visible=False), None
+        prev_note   = f"\n(Trial {i} matched in {_fmt_time(t_last_match)})" if i > 0 else ""
+        yield _status_html(
+            f"Step 3/4 — Matching trial {i + 1} of {total}:\n{short}{prev_note}"
+        ), "", "", "", gr.update(visible=False), None
         t0 = time.time()
         try:
             result = match_patient_to_trial(patient_profile, clinical_reasoning, trial)
@@ -1189,7 +1276,8 @@ def run_trialmatch(pdf_file, condition, language):
                 matches.append(result)
         except Exception:
             pass
-        t_match_acc += time.time() - t0
+        t_last_match  = time.time() - t0
+        t_match_acc  += t_last_match
     _timings["ai_match"]    = t_match_acc
     _timings["trial_count"] = total
 
@@ -1208,7 +1296,10 @@ def run_trialmatch(pdf_file, condition, language):
     # ── Translation runs automatically if the user selected a language ────────
     translated_html = ""
     if language != "English":
-        yield _status_html(f"🌐 Translating results to {language}…"), results_html_str, "", "", gr.update(visible=False), None
+        yield _status_html(
+            f"🌐 Translating results to {language}…\n"
+            f"(Matching {total} trial(s) completed in {_fmt_time(_timings['ai_match'])})"
+        ), results_html_str, "", "", gr.update(visible=False), None
         t0 = time.time()
         try:
             t_matches       = translate_matches(matches, language)
@@ -1232,7 +1323,13 @@ def run_trialmatch(pdf_file, condition, language):
     }
 
     yield (
-        _status_html("Matching complete — click ✨ Generate Reasoning & Emails to enrich results.", done=True),
+        _status_html(
+            "Matching complete — click ✨ Generate Reasoning & Emails to enrich results.\n"
+            f"(Total pipeline: {_fmt_time(_timings['total'])}  ·  "
+            f"Profile: {_fmt_time(t1)}  ·  "
+            f"Matching: {_fmt_time(_timings['ai_match'])})",
+            done=True,
+        ),
         timing_card + results_html_str,
         "",
         translated_html,
