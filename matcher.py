@@ -111,6 +111,7 @@ def match_patient_to_trial(patient_profile, clinical_reasoning, trial):
             "phase":               trial.get("phase",            ""),
             "sponsor":             trial.get("sponsor",          ""),
             "completion_date":     trial.get("completion_date",  ""),
+            "conditions":          trial.get("conditions",       []),
         }
 
     except Exception as e:
@@ -133,4 +134,5 @@ def match_patient_to_trial(patient_profile, clinical_reasoning, trial):
             "phase":               trial.get("phase",            ""),
             "sponsor":             trial.get("sponsor",          ""),
             "completion_date":     trial.get("completion_date",  ""),
+            "conditions":          trial.get("conditions",       []),
         }

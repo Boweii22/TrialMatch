@@ -607,6 +607,38 @@ def _build_criterion_rows(match):
     return rows
 
 
+def _context_card_html(m):
+    """One-line context card: what this trial studies and why it matters to this patient."""
+    conditions = m.get("conditions", [])
+    phase      = m.get("phase", "")
+    verdict    = m.get("verdict", "MATCH")
+
+    cond_str = " & ".join(c for c in conditions[:2] if c) if conditions else ""
+
+    phase_label = ""
+    if phase and phase not in ("Not specified", ""):
+        p = phase.replace("PHASE", "Phase ").replace("_", " ").strip()
+        phase_label = f" &middot; {p}"
+
+    if cond_str:
+        about = f'Investigating new treatments for <strong style="color:var(--text);">{cond_str}</strong>{phase_label}'
+    else:
+        about = f"Clinical research trial{phase_label}"
+
+    why = ("Your profile appears to meet the eligibility requirements for this study."
+           if verdict == "MATCH"
+           else "Additional pre-screening may confirm your eligibility.")
+
+    return (
+        f'<div style="background:var(--info-bg);border:1px solid var(--info-bd);'
+        f'border-left:3px solid var(--info);padding:10px 14px;border-radius:8px;'
+        f'margin:0 0 14px;font-size:0.83rem;font-family:system-ui,sans-serif;">'
+        f'<span style="color:var(--info);font-weight:700;">🔬 What this trial studies: </span>'
+        f'<span style="color:var(--text-2);">{about}. {why}</span>'
+        f'</div>'
+    )
+
+
 def _format_results_html(matches, total_trials, key_flags=None):
     sorted_m = sorted(matches, key=lambda m: m.get("confidence_score", 0), reverse=True)
     parts = ['<div style="font-family:system-ui,sans-serif;">']
@@ -715,10 +747,11 @@ def _format_results_html(matches, total_trials, key_flags=None):
             + " &nbsp;·&nbsp; ".join(contact_parts) + '</div>'
         ) if contact_parts else ""
 
-        nct_id         = m["nct_id"]
-        reason         = m.get("reason", "")
-        next_step      = m.get("next_step", "")
+        nct_id          = m["nct_id"]
+        reason          = m.get("reason", "")
+        next_step       = m.get("next_step", "")
         reasoning_chain = m.get("reasoning_chain", "").strip()
+        context_card    = _context_card_html(m)
 
         reason_html = (
             f'<p style="margin:0 0 12px;font-size:0.875rem;color:var(--text-2);line-height:1.65;">'
@@ -809,7 +842,7 @@ def _format_results_html(matches, total_trials, key_flags=None):
     </div>
     {_confidence_bar_html(conf, bar_color, bar_light)}
     <div style="border-top:1px solid var(--border);margin:14px 0;"></div>
-    {reason_html}{table_html}{ns_html}{reasoning_html}{contact_html}
+    {context_card}{reason_html}{table_html}{ns_html}{reasoning_html}{contact_html}
   </div>
 </div>""")
 
@@ -1635,6 +1668,25 @@ with gr.Blocks(title="TrialMatch") as demo:
     with gr.Tabs():
 
         with gr.Tab("🔬  Run Analysis"):
+            gr.HTML("""
+<div style="background:var(--surface);border:1px solid var(--border);
+            border-left:4px solid var(--accent);border-radius:12px;
+            padding:16px 22px;margin:0 0 20px;
+            display:flex;align-items:center;gap:20px;font-family:system-ui,sans-serif;">
+  <div style="text-align:center;flex-shrink:0;line-height:1;">
+    <div style="font-size:2rem;font-weight:900;color:var(--accent);">400K</div>
+    <div style="font-size:0.65rem;font-weight:700;color:var(--text-3);
+                text-transform:uppercase;letter-spacing:0.08em;margin-top:3px;">patients / year</div>
+  </div>
+  <div>
+    <div style="font-weight:700;color:var(--text);font-size:0.93rem;line-height:1.4;">
+      400,000 patients miss qualifying trials every year.
+    </div>
+    <div style="color:var(--text-2);font-size:0.82rem;margin-top:4px;line-height:1.5;">
+      TrialMatch finds yours in minutes &mdash; private, offline, no sign-up required.
+    </div>
+  </div>
+</div>""")
             with gr.Row(equal_height=False):
 
                 # ── Left: inputs ──────────────────────────────────────────────

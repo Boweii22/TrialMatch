@@ -114,7 +114,9 @@ def extract_patient_profile(pdf_path):
             err = str(e).lower()
             if any(k in err for k in ("connection", "refused", "connect", "socket")):
                 return "ERROR: Cannot connect to Ollama. Please ensure Ollama is running, then try again."
-            if any(k in err for k in ("not found", "model", "pull")):
+            if any(k in err for k in ("memory", "system memory", "out of memory")):
+                return "ERROR: Not enough RAM. Gemma 4 needs ~10 GB free. Close other apps and try again."
+            if "not found" in err:
                 return f"ERROR: Model {MODEL!r} not found. Run 'ollama pull {MODEL}' and try again."
             return f"ERROR: Extraction failed: {e}"
 
@@ -153,7 +155,9 @@ def extract_patient_profile(pdf_path):
                 err = str(e).lower()
                 if any(k in err for k in ("connection", "refused", "connect", "socket")):
                     return "ERROR: Cannot connect to Ollama. Please ensure Ollama is running, then try again."
-                if any(k in err for k in ("not found", "model", "pull")):
+                if any(k in err for k in ("memory", "system memory", "out of memory")):
+                    return "ERROR: Not enough RAM. Gemma 4 needs ~10 GB free. Close other apps and try again."
+                if "not found" in err:
                     return f"ERROR: Model {MODEL!r} not found. Run 'ollama pull {MODEL}' and try again."
                 profile_parts.append(f"--- Page {i + 1} --- [extraction error: {e}]")
         step_timings["ai_extract"] = time.time() - t0
