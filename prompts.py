@@ -192,6 +192,9 @@ Rules:
 - For Spanish: use simple, everyday Latin American Spanish
 - For Swahili: use simple, everyday Kiswahili
 - For French: use simple, clear French accessible to a general audience
+- For Chinese: write in Simplified Chinese characters (简体中文), everyday Mandarin
+- For Portuguese: use simple, clear Brazilian Portuguese accessible to a general audience
+- For Bengali: write in Bengali script (বাংলা), simple everyday language
 - Return ONLY the translated labeled fields, nothing else
 
 Fields to translate:

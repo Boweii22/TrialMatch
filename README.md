@@ -27,7 +27,7 @@ TrialMatch closes that gap. It reads a patient's medical records, reasons like a
 | **100% local AI** | Powered by Gemma 4 (`gemma4:e4b`) via Ollama — no API keys, no cloud |
 | **Fully offline** | 3,700+ recruiting trials pre-loaded in a local database — works with no internet |
 | **CPU-only** | Runs on any Windows/Mac/Linux machine — no GPU required |
-| **7 languages** | English · Urdu · Arabic · Hindi · Spanish · French · Swahili |
+| **10 languages** | English · Urdu · Arabic · Hindi · Spanish · French · Swahili · Chinese · Portuguese · Bengali |
 | **RTL support** | Native right-to-left rendering for Urdu and Arabic |
 | **Privacy by design** | Zero patient data transmitted anywhere — verified in the Privacy & Trust tab |
 | **Fine-tuned model** | Custom LoRA-adapted Gemma 4 trained on 120+ clinical matching examples |
@@ -71,7 +71,7 @@ After verdicts are displayed, a single button triggers enrichment for MATCH/PART
 Keeping enrichment on-demand saves ~3 minutes on CPU — results appear faster, enrichment runs only when wanted.
 
 ### Step 6 — Translation
-Results are translated into the selected language using Gemma 4. Medical codes, drug names, NCT IDs, and lab values are preserved in English. Urdu and Arabic are rendered right-to-left. All 7 languages run through the same translation prompt — no external translation API required.
+Results are translated into the selected language using Gemma 4. Medical codes, drug names, NCT IDs, and lab values are preserved in English. Urdu and Arabic are rendered right-to-left. All 10 languages run through the same translation prompt — no external translation API required.
 
 ### Step 7 — Privacy Audit
 A dedicated Privacy & Trust tab shows exactly what data flows where — with explicit confirmation that no patient data is transmitted to any external service.

@@ -7,7 +7,8 @@ from trial_fetcher import fetch_trials, db_exists
 from matcher import match_patient_to_trial, generate_reasoning_chain
 from extras import generate_inquiry_email, translate_matches
 
-_LANGUAGES  = ["English", "Urdu", "Arabic", "Hindi", "Spanish", "French", "Swahili"]
+_LANGUAGES  = ["English", "Urdu", "Arabic", "Hindi", "Spanish", "French", "Swahili",
+               "Chinese", "Portuguese", "Bengali"]
 _RTL_LANGS  = {"Urdu", "Arabic"}
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -1804,6 +1805,18 @@ with gr.Blocks(title="TrialMatch") as demo:
                         label="Results Language",
                         info="Urdu and Arabic render right-to-left.",
                     )
+                    gr.HTML(
+                        '<div style="margin:-8px 0 12px;padding:10px 14px;'
+                        'background:var(--accent-bg);border:1px solid var(--border-2);'
+                        'border-left:3px solid var(--accent);border-radius:8px;'
+                        'font-family:system-ui,sans-serif;">'
+                        '<div style="font-size:0.81rem;color:var(--accent);font-weight:700;'
+                        'margin-bottom:3px;">🌍 2 billion patients don\'t read English.</div>'
+                        '<div style="font-size:0.78rem;color:var(--text-2);line-height:1.5;">'
+                        'Results explained in your language — because healthcare information '
+                        'should have no language barrier.</div>'
+                        '</div>'
+                    )
                     run_btn = gr.Button("▶  Run TrialMatch", variant="primary")
                     gr.HTML(
                         '<p style="font-size:0.76rem;color:var(--text-3);margin-top:6px;'
@@ -1834,8 +1847,10 @@ with gr.Blocks(title="TrialMatch") as demo:
                         gr.HTML(
                             '<p style="font-size:0.82rem;color:var(--text-3);margin:0 0 10px;'
                             'font-family:system-ui,sans-serif;">'
-                            'Select a non-English language above then run the analysis. '
-                            'Translation happens automatically. Urdu and Arabic are displayed right-to-left.</p>'
+                            'Select a language above then run the analysis. '
+                            'Translation happens automatically. Urdu and Arabic render right-to-left. '
+                            '10 languages: Urdu · Arabic · Hindi · Spanish · French · '
+                            'Swahili · Chinese · Portuguese · Bengali.</p>'
                         )
                         translated_output = gr.HTML(value="")
 
