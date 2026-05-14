@@ -3,7 +3,7 @@ import time
 import gradio as gr
 
 from profile_extractor import extract_patient_profile
-from trial_fetcher import fetch_trials, db_exists, db_count
+from trial_fetcher import fetch_trials, db_exists, db_count, is_online
 from matcher import match_patient_to_trial, generate_reasoning_chain
 from extras import generate_inquiry_email, translate_matches
 
@@ -1257,7 +1257,7 @@ def run_trialmatch(pdf_file, condition, language):
     key_flags          = profile_data["key_flags"]
     _timings.update(profile_data.get("step_timings", {}))
 
-    _mode_label = "local database 🔌 offline" if db_exists() else "ClinicalTrials.gov 🌐 online"
+    _mode_label = "ClinicalTrials.gov 🌐 online" if is_online() else f"local database 🔌 offline ({_DB_TRIAL_COUNT:,} trials)"
     t1 = _timings.get("pdf_read", 0) + _timings.get("ai_extract", 0)
     yield _status_html(
         f"Step 2/4 — Searching {_mode_label} for recruiting trials...\n"

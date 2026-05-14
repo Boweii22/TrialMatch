@@ -172,51 +172,50 @@ def _fetch_trials_offline(condition_keyword, max_results):
     return results
 
 
+def is_online():
+    """Return True if ClinicalTrials.gov is reachable."""
+    try:
+        requests.head("https://clinicaltrials.gov", timeout=3)
+        return True
+    except Exception:
+        return False
+
+
 def fetch_trials(condition_keyword, max_results=3):
     """
     Return up to max_results recruiting trials for condition_keyword.
 
     Priority:
-      1. Local trials_db.json  — instant, zero internet
-      2. ClinicalTrials.gov API — fallback when DB not present
+      1. ClinicalTrials.gov API  — when internet is available (freshest results)
+      2. Local trials_db.json   — fallback when offline or API unreachable
     """
+    if is_online():
+        print(f"[trial_fetcher] Online: querying ClinicalTrials.gov for {condition_keyword!r}")
+        params = {
+            "query.cond":           condition_keyword,
+            "filter.overallStatus": "RECRUITING",
+            "pageSize":             max_results,
+            "format":               "json",
+        }
+        try:
+            response = requests.get(_API_URL, params=params, timeout=_TIMEOUT)
+            response.raise_for_status()
+            data         = response.json()
+            raw_studies  = data.get("studies", [])
+            clean_trials = [_extract_trial(s) for s in raw_studies]
+            print(f"[trial_fetcher] Online: fetched {len(clean_trials)} trial(s)")
+            if clean_trials:
+                return clean_trials
+        except requests.exceptions.ConnectionError:
+            print("[trial_fetcher] Connection dropped — falling back to local DB")
+        except Exception as e:
+            print(f"[trial_fetcher] Online fetch error ({e}) — falling back to local DB")
+
+    # ── Offline fallback ──────────────────────────────────────────────────────
     if db_exists():
         results = _fetch_trials_offline(condition_keyword, max_results)
         if results is not None:
             return results
 
-    # ── Online fallback ───────────────────────────────────────────────────────
-    print(f"[trial_fetcher] Online: querying ClinicalTrials.gov for {condition_keyword!r}")
-    params = {
-        "query.cond":           condition_keyword,
-        "filter.overallStatus": "RECRUITING",
-        "pageSize":             max_results,
-        "format":               "json",
-    }
-
-    try:
-        response = requests.get(_API_URL, params=params, timeout=_TIMEOUT)
-        response.raise_for_status()
-    except requests.exceptions.Timeout:
-        print("[trial_fetcher] ERROR: Request timed out.")
-        return []
-    except requests.exceptions.ConnectionError:
-        print("[trial_fetcher] ERROR: Cannot reach ClinicalTrials.gov.")
-        return []
-    except requests.exceptions.HTTPError as e:
-        print(f"[trial_fetcher] ERROR: HTTP error: {e}")
-        return []
-    except Exception as e:
-        print(f"[trial_fetcher] ERROR: {e}")
-        return []
-
-    try:
-        data = response.json()
-    except Exception as e:
-        print(f"[trial_fetcher] ERROR: Could not parse JSON: {e}")
-        return []
-
-    raw_studies  = data.get("studies", [])
-    clean_trials = [_extract_trial(s) for s in raw_studies]
-    print(f"[trial_fetcher] Online: fetched {len(clean_trials)} trial(s)")
-    return clean_trials
+    print("[trial_fetcher] ERROR: No internet and no local database found.")
+    return []
