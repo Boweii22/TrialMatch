@@ -3,13 +3,21 @@ import time
 import gradio as gr
 
 from profile_extractor import extract_patient_profile
-from trial_fetcher import fetch_trials, db_exists
+from trial_fetcher import fetch_trials, db_exists, db_count
 from matcher import match_patient_to_trial, generate_reasoning_chain
 from extras import generate_inquiry_email, translate_matches
 
 _LANGUAGES  = ["English", "Urdu", "Arabic", "Hindi", "Spanish", "French", "Swahili",
                "Chinese", "Portuguese", "Bengali"]
 _RTL_LANGS  = {"Urdu", "Arabic"}
+
+# Computed once at startup — used in the DB info line under the search box
+_DB_TRIAL_COUNT = db_count()
+_DB_INFO = (
+    f"🔌 Local database: {_DB_TRIAL_COUNT:,} trials · 37 conditions — works fully offline"
+    if _DB_TRIAL_COUNT > 0
+    else "🌐 No local database yet — will search ClinicalTrials.gov online"
+)
 
 # ─────────────────────────────────────────────────────────────────────────────
 # CSS — injected into <head> via demo.launch(css=...)
@@ -1810,6 +1818,10 @@ with gr.Blocks(title="TrialMatch") as demo:
                         label="Primary Condition",
                         placeholder="e.g. type 2 diabetes, lung cancer…",
                         lines=1,
+                    )
+                    gr.HTML(
+                        f'<p style="font-size:0.76rem;color:var(--text-3);margin:-6px 0 10px;'
+                        f'font-family:system-ui,sans-serif;">{_DB_INFO}</p>'
                     )
                     language_dropdown = gr.Dropdown(
                         choices=_LANGUAGES,

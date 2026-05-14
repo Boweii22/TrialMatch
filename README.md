@@ -37,6 +37,19 @@ TrialMatch closes that gap. It reads a patient's medical records, reasons like a
 
 ---
 
+## Designed for Global Resilience
+
+TrialMatch was built for the places where clinical trial access matters most and internet access is least reliable:
+
+- **Rural clinics in Pakistan, Nigeria, and Bangladesh** — a doctor has a patient PDF and no reliable connection. TrialMatch runs the full AI pipeline on a laptop with no internet.
+- **Field hospitals in conflict zones** — medical staff need to know if a patient qualifies for a compassionate use trial. The local database works in airplane mode.
+- **Community health workers in low-bandwidth regions** — the trial database downloads once (3–5 MB) and works indefinitely offline. No streaming, no API calls, no cloud dependency.
+- **Patients who don't read English** — results in Urdu, Arabic, Hindi, Chinese, Bengali, Spanish, French, Portuguese, or Swahili, generated locally with no translation API.
+
+The offline-first architecture is not a convenience feature — it is the product.
+
+---
+
 ## How It Works
 
 TrialMatch runs a seven-step pipeline entirely on your machine:

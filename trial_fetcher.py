@@ -13,6 +13,17 @@ def db_exists():
     return os.path.exists(DB_PATH)
 
 
+def db_count():
+    """Return number of trials in the local database, or 0 if not present."""
+    if not db_exists():
+        return 0
+    try:
+        with open(DB_PATH, encoding="utf-8") as f:
+            return len(json.load(f))
+    except Exception:
+        return 0
+
+
 def _extract_trial(study):
     """
     Convert a raw ClinicalTrials.gov study object into a clean, flat dict.
