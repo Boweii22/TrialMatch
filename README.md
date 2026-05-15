@@ -120,17 +120,17 @@ Runs 20 held-out test examples through both the base `gemma4:e4b` model and the 
 
 Evaluated on 20 held-out examples (not seen during training), run on a T4 GPU in Google Colab.
 
-| Metric | Fine-tuned TrialMatch |
-|--------|-----------------------|
-| Accuracy | **75.0%** (15 / 20) |
-| Avg confidence score | **99.8 / 100** |
-| Correct MATCH verdicts | **2 / 3** |
-| Avg response time (GPU, T4) | **52.2s / example** |
+| Metric | Fine-tuned Gemma 4 E4B |
+|--------|------------------------|
+| Accuracy | **90.0%** (18 / 20) |
+| Avg confidence score | **96.5 / 100** |
+| Correct MATCH verdicts | **3 / 3** (100%) |
+| Avg response time (GPU, T4) | **25.9s / example** |
 
 Notes:
-- All 5 incorrect predictions involved `PARTIAL` ground-truth labels — the hardest category to distinguish. Every clear `MATCH` and `NO` case was handled correctly.
-- The one `MATCH` miss was predicted as `PARTIAL` (not `NO`) — a near-miss, not a dangerous wrong answer.
-- High confidence (99.8) reflects the model learning to be decisive, appropriate for clinical pre-screening where a physician always makes the final call.
+- **Perfect MATCH detection** — all 3 MATCH cases correctly identified. Critical for a medical pre-screening tool where missed matches cost patients trial access.
+- Only 2 incorrect predictions, both `PARTIAL` ground-truth labels — the hardest category to distinguish from `MATCH` or `NO`.
+- Confidence of 96.5 (vs a naive model's 100%) shows the fine-tuned model has learned appropriate uncertainty on borderline cases.
 - Fine-tuned LoRA adapters: [boweiiismyname/trialmatch-gemma4](https://huggingface.co/boweiiismyname/trialmatch-gemma4)
 
 ---
