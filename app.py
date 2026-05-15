@@ -178,11 +178,155 @@ label span {
     50%      { opacity:0.25; transform:scale(0.72); }
 }
 
-/* ── Responsive ─────────────────────────────────────────────────────────── */
+/* ── Light mode: force Gradio's own CSS variables so text is always visible */
+/* Without this, Gradio's Soft theme can bleed white text onto white bg      */
+/* on mobile browsers that respect prefers-color-scheme at the theme level.  */
+html:not(.tm-dark) {
+    color-scheme: light;
+    --body-background-fill:            #f1f5f9 !important;
+    --body-background-fill-secondary:  #ffffff !important;
+    --block-background-fill:           #ffffff !important;
+    --block-border-color:              #e2e8f0 !important;
+    --block-label-background-fill:     #f8fafc !important;
+    --block-label-text-color:          #475569 !important;
+    --block-title-text-color:          #0f172a !important;
+    --block-info-text-color:           #475569 !important;
+    --body-text-color:                 #0f172a !important;
+    --body-text-color-subdued:         #475569 !important;
+    --color-accent:                    #2563eb !important;
+    --color-accent-soft:               #eff6ff !important;
+    --input-background-fill:           #f8fafc !important;
+    --input-background-fill-focus:     #ffffff !important;
+    --input-border-color:              #e2e8f0 !important;
+    --input-placeholder-color:         #94a3b8 !important;
+    --panel-background-fill:           #ffffff !important;
+    --table-even-background-fill:      #f8fafc !important;
+    --table-odd-background-fill:       #ffffff !important;
+    --neutral-50:   #f8fafc !important;  --neutral-100: #f1f5f9 !important;
+    --neutral-200:  #e2e8f0 !important;  --neutral-300: #cbd5e1 !important;
+    --neutral-400:  #94a3b8 !important;  --neutral-500: #64748b !important;
+    --neutral-600:  #475569 !important;  --neutral-700: #334155 !important;
+    --neutral-800:  #1e293b !important;  --neutral-900: #0f172a !important;
+    --background-fill-primary:         #ffffff !important;
+    --background-fill-secondary:       #f8fafc !important;
+}
+html:not(.tm-dark) .block,
+html:not(.tm-dark) .form,
+html:not(.tm-dark) .padded,
+html:not(.tm-dark) fieldset {
+    background: #ffffff !important;
+    color: #0f172a !important;
+    border-color: #e2e8f0 !important;
+}
+html:not(.tm-dark) input[type=text],
+html:not(.tm-dark) textarea,
+html:not(.tm-dark) select {
+    color: #0f172a !important;
+    background: #f8fafc !important;
+}
+
+/* ── Responsive / Mobile ────────────────────────────────────────────────── */
 @media (max-width: 900px) {
+    /* Stack columns vertically */
     .gap, [class*="row"] { flex-wrap: wrap !important; }
-    [class*="column"] { min-width: 100% !important; width: 100% !important; flex: 1 1 100% !important; }
-    .tabitem { padding: 16px !important; }
+    [class*="column"] {
+        min-width: 100% !important;
+        width: 100% !important;
+        flex: 1 1 100% !important;
+    }
+    .tabitem { padding: 12px !important; }
+
+    /* Gradio container full width */
+    .gradio-container { padding: 0 !important; margin: 0 !important; max-width: 100% !important; }
+
+    /* Header — move toggle below title, not overlapping */
+    #tm-toggle {
+        position: static !important;
+        display: block !important;
+        margin: 12px 0 0 auto !important;
+        padding: 10px 20px !important;
+        min-height: 44px !important;
+        min-width: 90px !important;
+        font-size: 0.85rem !important;
+    }
+
+    /* Tabs — horizontally scrollable, no wrap */
+    .tab-nav {
+        overflow-x: auto !important;
+        overflow-y: hidden !important;
+        white-space: nowrap !important;
+        -webkit-overflow-scrolling: touch !important;
+        border-radius: 0 !important;
+        position: sticky !important;
+        top: 0 !important;
+        z-index: 100 !important;
+    }
+    .tab-nav button {
+        font-size: 0.75rem !important;
+        padding: 12px 16px !important;
+        min-height: 44px !important;
+    }
+
+    /* Buttons — full width, finger-friendly (min 44px Apple HIG) */
+    button.primary, button.secondary {
+        width: 100% !important;
+        padding: 16px 20px !important;
+        font-size: 0.9rem !important;
+        min-height: 48px !important;
+        border-radius: 12px !important;
+    }
+
+    /* Inputs — comfortable on mobile */
+    input[type=text], textarea, select {
+        font-size: 16px !important;   /* prevents iOS zoom-on-focus */
+        padding: 12px !important;
+        min-height: 44px !important;
+    }
+
+    /* Collapse all two-column grids to single column */
+    [style*="grid-template-columns:1fr 1fr"] {
+        grid-template-columns: 1fr !important;
+    }
+
+    /* Toast — full width */
+    #tm-toast {
+        top: 12px !important; right: 12px !important;
+        left: 12px !important; max-width: calc(100% - 24px) !important;
+    }
+
+    /* Impact stat banner */
+    [style*="display:flex;align-items:center;gap:20px;font-family"] {
+        flex-direction: column !important;
+        gap: 8px !important;
+        text-align: center !important;
+    }
+
+    /* Architecture flow boxes — stack */
+    [style*="display:flex;align-items:center;justify-content:center;flex-wrap:wrap;gap:8px"] {
+        flex-direction: column !important;
+        align-items: stretch !important;
+    }
+}
+
+@media (max-width: 480px) {
+    .tabitem { padding: 8px !important; }
+    .tab-nav button { font-size: 0.7rem !important; padding: 10px 12px !important; }
+    /* Header banner — tighter on small phones */
+    [style*="padding:30px 36px;border-radius:16px"] {
+        padding: 18px 16px !important;
+        border-radius: 0 !important;
+    }
+    [style*="font-size:2rem;font-weight:800;letter-spacing:-0.04em"] {
+        font-size: 1.6rem !important;
+    }
+    [style*="font-size:0.9rem;margin-top:5px"] {
+        font-size: 0.78rem !important;
+    }
+    /* Safe area padding for notched phones */
+    html, body {
+        padding-top: env(safe-area-inset-top) !important;
+        padding-bottom: env(safe-area-inset-bottom) !important;
+    }
 }
 
 /* ── Scrollbar ──────────────────────────────────────────────────────────── */
@@ -318,11 +462,102 @@ html.tm-dark .icon svg {
 
 _THEME_JS = """
 () => {
-    // ── Theme ──────────────────────────────────────────────────────────────
+    // ── Apply all CSS variables directly on <html> via style.setProperty ──
+    // Using inline styles means NO stylesheet can override them, regardless
+    // of what Gradio's theme injects. This fixes white-on-white in light mode.
+    const applyVars = (dark) => {
+        const r = document.documentElement;
+        const s = (k, v) => r.style.setProperty(k, v);
+
+        if (dark) {
+            s('--bg',           '#070c18');
+            s('--surface',      '#0d1528');
+            s('--surface-2',    '#111e33');
+            s('--border',       'rgba(255,255,255,0.06)');
+            s('--border-2',     'rgba(255,255,255,0.12)');
+            s('--text',         '#e2e8f0');
+            s('--text-2',       '#94a3b8');
+            s('--text-3',       '#475569');
+            s('--accent',       '#60a5fa');
+            s('--accent-2',     '#3b82f6');
+            s('--accent-bg',    'rgba(96,165,250,0.08)');
+            s('--accent-glow',  'rgba(96,165,250,0.22)');
+            s('--green',        '#34d399'); s('--green-2','#6ee7b7');
+            s('--green-bg',     'rgba(52,211,153,0.09)');
+            s('--green-bd',     'rgba(52,211,153,0.22)');
+            s('--amber',        '#fbbf24'); s('--amber-2','#fde68a');
+            s('--amber-bg',     'rgba(251,191,36,0.09)');
+            s('--amber-bd',     'rgba(251,191,36,0.22)');
+            s('--red',          '#f87171'); s('--red-2','#fca5a5');
+            s('--red-bg',       'rgba(248,113,113,0.09)');
+            s('--red-bd',       'rgba(248,113,113,0.22)');
+            s('--info',         '#38bdf8');
+            s('--info-bg',      'rgba(56,189,248,0.08)');
+            s('--info-bd',      'rgba(56,189,248,0.2)');
+            s('--shadow',       '0 1px 4px rgba(0,0,0,0.5),0 0 0 1px rgba(255,255,255,0.04)');
+            s('--shadow-md',    '0 4px 20px rgba(0,0,0,0.55),0 0 0 1px rgba(255,255,255,0.05)');
+            // Gradio overrides
+            s('--body-background-fill',           '#070c18');
+            s('--block-background-fill',          '#0d1528');
+            s('--block-label-text-color',         '#94a3b8');
+            s('--block-title-text-color',         '#e2e8f0');
+            s('--block-info-text-color',          '#94a3b8');
+            s('--input-background-fill',          '#111e33');
+            s('--input-border-color',             'rgba(255,255,255,0.06)');
+            s('--color-accent',                   '#60a5fa');
+            s('--background-fill-primary',        '#0d1528');
+            s('--background-fill-secondary',      '#111e33');
+            s('--neutral-900',  '#f1f5f9'); s('--neutral-800','#e2e8f0');
+            s('--neutral-700',  '#cbd5e1'); s('--neutral-600','#94a3b8');
+            s('--neutral-500',  '#64748b'); s('--neutral-400','#475569');
+            s('--neutral-100',  '#0d1528'); s('--neutral-50', '#070c18');
+        } else {
+            s('--bg',           '#f1f5f9');
+            s('--surface',      '#ffffff');
+            s('--surface-2',    '#f8fafc');
+            s('--border',       '#e2e8f0');
+            s('--border-2',     '#cbd5e1');
+            s('--text',         '#0f172a');
+            s('--text-2',       '#475569');
+            s('--text-3',       '#94a3b8');
+            s('--accent',       '#2563eb');
+            s('--accent-2',     '#1d4ed8');
+            s('--accent-bg',    '#eff6ff');
+            s('--accent-glow',  'rgba(37,99,235,0.18)');
+            s('--green',        '#059669'); s('--green-2','#34d399');
+            s('--green-bg',     '#f0fdf4'); s('--green-bd','#6ee7b7');
+            s('--amber',        '#d97706'); s('--amber-2','#fbbf24');
+            s('--amber-bg',     '#fffbeb'); s('--amber-bd','#fde68a');
+            s('--red',          '#dc2626'); s('--red-2','#f87171');
+            s('--red-bg',       '#fef2f2'); s('--red-bd','#fecaca');
+            s('--info',         '#0ea5e9');
+            s('--info-bg',      '#f0f9ff'); s('--info-bd','#bae6fd');
+            s('--shadow',       '0 1px 3px rgba(0,0,0,0.05),0 0 0 1px rgba(0,0,0,0.03)');
+            s('--shadow-md',    '0 4px 16px rgba(0,0,0,0.08),0 0 0 1px rgba(0,0,0,0.04)');
+            // Gradio overrides — force light values so text is always readable
+            s('--body-background-fill',           '#f1f5f9');
+            s('--block-background-fill',          '#ffffff');
+            s('--block-label-text-color',         '#475569');
+            s('--block-title-text-color',         '#0f172a');
+            s('--block-info-text-color',          '#475569');
+            s('--input-background-fill',          '#f8fafc');
+            s('--input-border-color',             '#e2e8f0');
+            s('--color-accent',                   '#2563eb');
+            s('--background-fill-primary',        '#ffffff');
+            s('--background-fill-secondary',      '#f8fafc');
+            s('--neutral-900',  '#0f172a'); s('--neutral-800','#1e293b');
+            s('--neutral-700',  '#334155'); s('--neutral-600','#475569');
+            s('--neutral-500',  '#64748b'); s('--neutral-400','#94a3b8');
+            s('--neutral-100',  '#f1f5f9'); s('--neutral-50', '#f8fafc');
+        }
+    };
+
+    // ── Theme toggle ───────────────────────────────────────────────────────
     const saved  = localStorage.getItem('tm-theme');
     const osDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
     const isDark = saved === 'dark' || (!saved && osDark);
     document.documentElement.classList.toggle('tm-dark', isDark);
+    applyVars(isDark);
 
     let wired = false;
     const wire = () => {
@@ -335,6 +570,7 @@ _THEME_JS = """
             const dark = document.documentElement.classList.toggle('tm-dark');
             localStorage.setItem('tm-theme', dark ? 'dark' : 'light');
             this.textContent = dark ? '☀  Light' : '☾  Dark';
+            applyVars(dark);
         });
     };
     wire();
@@ -420,8 +656,10 @@ _HEADER_HTML = """
     style="position:absolute;top:18px;right:18px;cursor:pointer;
            background:rgba(255,255,255,0.1);color:rgba(255,255,255,0.9);
            border:1px solid rgba(255,255,255,0.22);border-radius:20px;
-           padding:6px 14px;font-size:0.78rem;font-weight:600;
+           padding:8px 18px;font-size:0.78rem;font-weight:600;
            font-family:system-ui,sans-serif;letter-spacing:0.04em;
+           min-height:38px;min-width:80px;
+           -webkit-tap-highlight-color:transparent;
            transition:background 0.2s,border-color 0.2s;">
     ☾  Dark
   </button>
@@ -1440,6 +1678,16 @@ def generate_enrichment(state):
 # Placeholder HTML (uses CSS variables → dark-mode aware)
 # ─────────────────────────────────────────────────────────────────────────────
 
+_HEAD_HTML = """
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="TrialMatch">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="theme-color" content="#060f24">
+<meta name="description" content="AI clinical trial matching — private, local, offline-capable">
+"""
+
 _STATUS_PLACEHOLDER = (
     '<div style="font-family:system-ui,sans-serif;background:var(--surface-2);'
     'border:1.5px solid var(--border);border-radius:10px;padding:16px 18px;'
@@ -1981,10 +2229,11 @@ if __name__ == "__main__":
     port = _find_free_port()
     print(f"Starting TrialMatch — open http://127.0.0.1:{port} in your browser")
     demo.launch(
-        server_name="127.0.0.1",
+        server_name="0.0.0.0",
         server_port=port,
         share=False,
         inbrowser=False,
         theme=gr.themes.Soft(),
         css=_CSS,
+        head=_HEAD_HTML,
     )

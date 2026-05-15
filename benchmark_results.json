@@ -1,0 +1,12 @@
+{
+  "n_test": 20,
+  "base_accuracy": 95.0,
+  "ft_accuracy": 0.0,
+  "base_avg_confidence": 93.9,
+  "ft_avg_confidence": 0.0,
+  "base_match_correct": "2/3",
+  "ft_match_correct": "0/3",
+  "base_avg_time_s": 114.8,
+  "ft_avg_time_s": 0.0,
+  "improvement_pp": -95.0
+}
