@@ -20,6 +20,22 @@ TrialMatch closes that gap. It reads a patient's medical records, reasons like a
 
 ---
 
+## Screenshots
+
+**Match Result**  
+![Match result showing MATCH verdict with confidence score and reasoning](screenshots/screenshot_match.png)
+
+**System Check**  
+![System Check tab confirming Ollama and Gemma 4 are running](screenshots/screenshot_system.png)
+
+**Privacy & Trust**  
+![Privacy tab showing all data flows are local only](screenshots/screenshot_privacy.png)
+
+**Translation (non-English)**  
+![Match result translated into a non-English language](screenshots/screenshot_translation.png)
+
+---
+
 ## Key Features
 
 | Feature | Detail |
