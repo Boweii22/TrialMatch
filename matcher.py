@@ -3,7 +3,46 @@ import re
 from utils import TOKENS, stream_response
 from prompts import MATCHING_PROMPT, REASONING_CHAIN_PROMPT
 
-_MAX_ELIGIBILITY_CHARS = 1500
+_MAX_ELIGIBILITY_CHARS = 1500  # safety cap on raw fetch; _slim_* functions trim intelligently
+
+
+def _slim_profile(text, max_val_chars=110):
+    """
+    Trim each labeled field value to max_val_chars characters so every field
+    label stays present (EXCLUSION FLAGS, LAB VALUES, etc.) even when the
+    overall profile is long.  Better than [:N] which silently drops tail fields.
+    """
+    lines = []
+    for line in text.split('\n'):
+        stripped = line.strip()
+        if not stripped:
+            continue
+        colon = stripped.find(':')
+        if 0 < colon < 30:
+            key = stripped[:colon + 1]
+            val = stripped[colon + 1:].strip()
+            if len(val) > max_val_chars:
+                val = val[:max_val_chars] + '…'
+            lines.append(f"{key} {val}" if val else key)
+        else:
+            lines.append(stripped[:max_val_chars])
+    return '\n'.join(lines)
+
+
+def _slim_eligibility(text, max_chars=800):
+    """
+    Skip the verbose preamble ClinicalTrials.gov prepends before the actual
+    criteria bullets ('Eligibility criteria: Patients may be eligible if...').
+    Start from 'Inclusion Criteria' or the first criterion bullet so the
+    token budget is spent on the criteria that actually drive the verdict.
+    """
+    lower = text.lower()
+    for marker in ('inclusion criteria', 'inclusion/exclusion criteria', 'eligibility criteria:'):
+        idx = lower.find(marker)
+        if idx > 60:           # only skip if there really is a preamble
+            return text[idx:][:max_chars]
+    # No findable preamble — just truncate from the start
+    return text[:max_chars]
 
 
 def _parse_match_response(text):
@@ -50,8 +89,8 @@ def generate_reasoning_chain(patient_profile, eligibility_text, verdict, confide
     prompt = REASONING_CHAIN_PROMPT.format(
         verdict=verdict,
         confidence=confidence,
-        patient_profile=patient_profile[:700],
-        eligibility_criteria=eligibility_text[:_MAX_ELIGIBILITY_CHARS],
+        patient_profile=_slim_profile(patient_profile),
+        eligibility_criteria=_slim_eligibility(eligibility_text),
     )
     try:
         return stream_response(
@@ -81,9 +120,9 @@ def match_patient_to_trial(patient_profile, clinical_reasoning, trial):
         # ── Primary matching ─────────────────────────────────────────────────
         # Truncate inputs: prefill on CPU is the dominant cost per call (×5 trials)
         prompt = MATCHING_PROMPT.format(
-            patient_profile      = patient_profile[:700],
-            clinical_reasoning   = clinical_reasoning[:350],
-            eligibility_criteria = eligibility_text,
+            patient_profile      = _slim_profile(patient_profile),
+            clinical_reasoning   = clinical_reasoning[:300],
+            eligibility_criteria = _slim_eligibility(eligibility_text),
         )
         raw    = stream_response(
             [{"role": "user", "content": prompt}],

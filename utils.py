@@ -6,7 +6,7 @@ MODEL = "gemma4:e4b"
 # Ollama's num_predict caps new tokens generated (not context window).
 TOKENS = {
     "extract":      380,   # 13 fields (9 extraction + 4 reasoning) — one combined call
-    "match":        160,   # 5-line verdict block
+    "match":        100,   # 5-line verdict block
     "reason_chain": 100,   # 3-sentence reasoning chain
     "email":        300,   # subject + brief body
     "translate":    450,   # non-Latin script overhead kept

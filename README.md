@@ -236,6 +236,34 @@ Normal on CPU-only. Close other applications to free RAM. The status bar updates
 
 ---
 
+## Ollama Integration
+
+Every AI call in TrialMatch runs through Gemma 4 (`gemma4:e4b`) via Ollama on `localhost:11434`. No cloud API, no API key, no data in transit.
+
+### Calls made
+
+| Step | Call | Tuning |
+|------|------|--------|
+| PDF profile extraction (text) | `ollama.chat` — 13-field combined extraction + clinical reasoning | `num_predict: 900`, `think: False` |
+| PDF extraction (scanned/image) | `ollama.chat` with raw page images — Gemma 4 Vision reads the scan | `num_predict: 900`, `think: False` |
+| Eligibility matching | `ollama.chat` — MATCH/PARTIAL/NO verdict per trial | `num_predict: 160`, `think: False` |
+| Reasoning chain | `ollama.chat` — 3-step criteria citation per MATCH/PARTIAL | `num_predict: 300`, `think: False` |
+| Email draft | `ollama.chat` — professional inquiry email | `num_predict: 350`, `think: False` |
+| Translation | `ollama.chat` — full results in selected language | `num_predict: 1200`, `think: False` |
+| Speed test | `ollama.chat` — live tok/s measurement in System Check | `num_predict: 25`, streamed |
+
+### Why these tuning choices matter
+
+- **`think: False`** — disables Gemma 4's chain-of-thought scratchpad. Each call would balloon to 3–5× the token count otherwise. Removing it cuts the full pipeline from ~20 min to ~7 min on CPU.
+- **Tight `num_predict` budgets** — each call gets the minimum tokens needed for its task. Matching needs 160 (5 fields); translation needs 1200 (full bilingual output). Over-budgeting wastes minutes per run.
+- **Streaming** — all calls stream tokens so the UI shows live progress rather than a blank screen for 7 minutes.
+
+### Vision capability
+
+When a PDF has no text layer (scanned records, photographed documents), TrialMatch automatically switches to Gemma 4's multimodal vision capability — passing raw page images directly to the model. The entire scanned document is read, interpreted, and matched **without leaving the device**. A `📷 Gemma 4 Vision` badge appears in the results when this path is used.
+
+---
+
 ## Privacy
 
 TrialMatch is built around a single privacy guarantee: **no patient data ever leaves your computer.**

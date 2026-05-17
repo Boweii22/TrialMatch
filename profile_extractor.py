@@ -5,6 +5,51 @@ from utils import MODEL, TOKENS, stream_response
 from pdf_reader import pdf_to_text, pdf_to_images
 from prompts import TEXT_EXTRACTION_PROMPT, EXTRACTION_PROMPT
 
+# Keywords that signal clinically relevant lines anywhere in the document.
+# Used by _smart_trim_pdf to pull high-value content from later pages.
+_CLINICAL_KW = (
+    'diagnosis', 'diagnosed', 'condition', 'disease', 'disorder', 'impression',
+    'medication', 'prescribed', 'drug', 'dose', 'mg', 'tablet', 'capsule',
+    'lab', 'result', 'hba1c', 'glucose', 'creatinine', 'egfr', 'cholesterol',
+    'hemoglobin', 'platelet', 'sodium', 'potassium', 'wbc', 'rbc', 'bilirubin',
+    'allerg', 'reaction', 'intolerant', 'contraindicated',
+    'blood pressure', 'bp:', 'pulse', 'heart rate', 'temperature', 'weight',
+    'procedure', 'surgery', 'biopsy', 'imaging', 'scan', 'echocardiogram',
+    'cancer', 'tumor', 'diabetes', 'hypertension', 'failure', 'asthma',
+    'age:', 'sex:', 'gender:', 'male', 'female', 'dob:', 'date of birth',
+)
+
+
+def _smart_trim_pdf(text, max_chars=3500):
+    """
+    Smarter than [:N]: always include the first 1500 chars (demographics,
+    chief complaint), then scan the remainder line-by-line and pull in any
+    line that contains a clinical keyword — catching lab values or diagnoses
+    on later pages that a hard chop would silently drop.
+    """
+    if len(text) <= max_chars:
+        return text
+
+    first_chunk = text[:1500]
+    remainder   = text[1500:]
+    budget      = max_chars - len(first_chunk)
+    extra_lines = []
+    collected   = 0
+
+    for line in remainder.split('\n'):
+        stripped = line.strip()
+        if not stripped:
+            continue
+        lower = stripped.lower()
+        if any(kw in lower for kw in _CLINICAL_KW):
+            need = len(stripped) + 1
+            if collected + need > budget:
+                break
+            extra_lines.append(stripped)
+            collected += need
+
+    return (first_chunk + '\n' + '\n'.join(extra_lines)).strip()
+
 # Reasoning fields now produced by the combined extraction prompt — no separate call needed.
 _REASONING_FIELDS = ("CLINICAL SEVERITY:", "DISEASE STABILITY:", "KEY CLINICAL FACTORS:", "POTENTIAL CONCERNS:")
 _EXTRACTION_FIELDS = (
@@ -103,10 +148,11 @@ def extract_patient_profile(pdf_path):
 
     if text_ok:
         print("[profile_extractor] Text extracted from PDF — single combined LLM call.")
+        pdf_text_trimmed = _smart_trim_pdf(pdf_text)
         try:
             t0 = time.time()
             combined = stream_response(
-                [{"role": "user", "content": TEXT_EXTRACTION_PROMPT.format(pdf_text=pdf_text)}],
+                [{"role": "user", "content": TEXT_EXTRACTION_PROMPT.format(pdf_text=pdf_text_trimmed)}],
                 max_tokens=TOKENS["extract"],
             )
             step_timings["ai_extract"] = time.time() - t0
@@ -175,4 +221,5 @@ def extract_patient_profile(pdf_path):
         "clinical_reasoning": clinical_reasoning,
         "key_flags":          key_flags,
         "step_timings":       step_timings,
+        "used_vision":        not text_ok,
     }

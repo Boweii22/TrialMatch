@@ -613,30 +613,44 @@ _THEME_JS = """
         }, 8000);
 
         if ('Notification' in window && Notification.permission === 'granted') {
-            new Notification(heading, { body });
+            const n = new Notification(heading, { body, icon: '' });
+            n.onclick = () => { window.focus(); n.close(); };
         }
     };
 
-    let notifyWired = false;
-    const wireNotify = () => {
+    // Poll instead of MutationObserver — Gradio can replace the #tm-status
+    // DOM node entirely, orphaning any observer attached to the old element.
+    // A 1.5 s poll always reads the live element from the DOM.
+    let _tmLast     = '';
+    let _tmNotified = false;
+    setInterval(() => {
         const el = document.getElementById('tm-status');
-        if (!el || notifyWired) return;
-        notifyWired = true;
-        new MutationObserver(() => {
-            const txt = el.innerText || '';
-            if (txt.includes('Step 1/4')) {
-                delete el.dataset.notified;
-            } else if (txt.includes('Analysis complete') && !el.dataset.notified) {
-                el.dataset.notified = '1';
-                showToast('✅', 'TrialMatch — Done!', 'Your trial matching is complete. Results are ready below.', false);
-            } else if (txt.includes('ERROR:') && !el.dataset.notified) {
-                el.dataset.notified = '1';
-                showToast('❌', 'TrialMatch — Error', 'An error occurred. Check the status box for details.', true);
-            }
-        }).observe(el, { childList: true, subtree: true, characterData: true });
-    };
-    wireNotify();
-    new MutationObserver(wireNotify).observe(document.body, { childList: true, subtree: true });
+        if (!el) return;
+        const txt = (el.innerText || el.textContent || '').trim();
+        if (txt === _tmLast) return;
+        _tmLast = txt;
+
+        // New run starting — reset so we notify again when it finishes
+        if (/Step [1-4]\/4/.test(txt) || txt.includes('Reading your medical')) {
+            _tmNotified = false;
+            return;
+        }
+        if (_tmNotified) return;
+
+        if (txt.includes('Matching complete')) {
+            _tmNotified = true;
+            showToast('✅', 'TrialMatch — Done!',
+                'Matching complete. Click ✨ Generate Reasoning & Emails to enrich results.', false);
+        } else if (txt.includes('Analysis complete')) {
+            _tmNotified = true;
+            showToast('✅', 'TrialMatch — Enrichment Done!',
+                'Reasoning chains and email drafts are ready.', false);
+        } else if (txt.includes('ERROR:')) {
+            _tmNotified = true;
+            showToast('❌', 'TrialMatch — Error',
+                'An error occurred. Check the status box for details.', true);
+        }
+    }, 1500);
 
     return [];
 }
@@ -1206,11 +1220,10 @@ def _check_row(status, message):
 
 
 def check_system():
-    import ollama as _ollama
+    """Fast check: Ollama running + model installed. No inference call."""
     from utils import MODEL
     rows = []
 
-    # ── 1. Ollama running + version ───────────────────────────────────────────
     ollama_version = ""
     try:
         v = requests.get("http://localhost:11434/api/version", timeout=5)
@@ -1224,7 +1237,6 @@ def check_system():
         ver_label = f" v{ollama_version}" if ollama_version else ""
         rows.append(_check_row("ok", f"Ollama{ver_label} — running"))
 
-        # ── 2. Model details ──────────────────────────────────────────────────
         models_data = resp.json().get("models", [])
         model_entry = next((m for m in models_data if MODEL in m.get("name", "")), None)
         if model_entry:
@@ -1234,6 +1246,12 @@ def check_system():
             params  = details.get("parameter_size", "")
             info    = "  ·  ".join(filter(None, [params, quant, f"{size_gb:.1f} GB on disk"]))
             rows.append(_check_row("ok", f"{MODEL}  ·  {info}"))
+            rows.append(
+                f'<div style="padding:4px 14px 12px 44px;font-size:0.79rem;'
+                f'color:var(--text-3);font-family:system-ui,sans-serif;line-height:1.55;">'
+                f'Running Gemma 4 locally via Ollama — no cloud, no API cost, '
+                f'no data leaving this machine. Full analysis: ~7–10 min on CPU.</div>'
+            )
         else:
             installed = [m.get("name", "") for m in models_data]
             rows.append(_check_row("error", f"{MODEL} not found — run: ollama pull {MODEL}"))
@@ -1242,20 +1260,25 @@ def check_system():
                     f'<p style="font-size:0.82rem;color:var(--text-3);margin:0 0 4px 44px;'
                     f'font-family:system-ui,sans-serif;">Installed: {", ".join(installed)}</p>'
                 )
-            return f'<div style="padding:4px;">{"".join(rows)}</div>'
 
     except requests.exceptions.ConnectionError:
         rows.append(_check_row("error", "Ollama is NOT running — run: ollama serve"))
-        return f'<div style="padding:4px;">{"".join(rows)}</div>'
     except Exception as e:
         rows.append(_check_row("warn", f"Could not reach Ollama: {e}"))
-        return f'<div style="padding:4px;">{"".join(rows)}</div>'
 
-    # ── 3. Live inference speed test ──────────────────────────────────────────
+    return f'<div style="padding:4px;">{"".join(rows)}</div>'
+
+
+def run_speed_test():
+    """Optional live inference speed test — takes 30-60 s on CPU."""
+    import ollama as _ollama
+    from utils import MODEL
+    rows = []
+
     rows.append(
         f'<div style="padding:8px 14px 8px 44px;font-size:0.81rem;'
         f'color:var(--text-3);font-style:italic;font-family:system-ui,sans-serif;">'
-        f'Running live speed test (~10 s)…</div>'
+        f'Running live speed test — loading model into RAM, may take 30–60 s…</div>'
     )
     try:
         t0     = time.time()
@@ -1274,7 +1297,6 @@ def check_system():
             last_chunk = chunk
         elapsed = time.time() - t0
 
-        # Use Ollama's own eval stats when available (most accurate)
         if (last_chunk
                 and getattr(last_chunk, "eval_count",    None)
                 and getattr(last_chunk, "eval_duration", None)
@@ -1289,12 +1311,6 @@ def check_system():
             "ok",
             f"Inference speed: {tps:.1f} tok/s  ·  {tok_count} tokens in {elapsed:.1f}s  ·  CPU-only"
         ))
-        rows.append(
-            f'<div style="padding:4px 14px 12px 44px;font-size:0.79rem;'
-            f'color:var(--text-3);font-family:system-ui,sans-serif;line-height:1.55;">'
-            f'Running Gemma 4 locally via Ollama — no cloud, no API cost, '
-            f'no data leaving this machine. Full analysis: ~7–10 min on CPU.</div>'
-        )
 
     except Exception as e:
         err = str(e).lower()
@@ -1449,10 +1465,10 @@ def run_trialmatch(pdf_file, condition, language):
     _no_change = gr.update()   # sentinel: leave component unchanged
 
     if pdf_file is None:
-        yield _status_html("⚠  Please upload a PDF file before running.", warn=True), "", "", "", gr.update(visible=False), None
+        yield _status_html("⚠  Please upload a PDF file before running.", warn=True), "", "", "", gr.update(), None
         return
     if not condition or not condition.strip():
-        yield _status_html("⚠  Please enter a condition keyword (e.g. 'type 2 diabetes').", warn=True), "", "", "", gr.update(visible=False), None
+        yield _status_html("⚠  Please enter a condition keyword (e.g. 'type 2 diabetes').", warn=True), "", "", "", gr.update(), None
         return
 
     condition        = condition.strip()
@@ -1470,7 +1486,7 @@ def run_trialmatch(pdf_file, condition, language):
         pdf_path = str(pdf_file)
 
     if not pdf_path:
-        yield _status_html("ERROR: Could not determine the uploaded file path."), "", "", "", gr.update(visible=False), None
+        yield _status_html("ERROR: Could not determine the uploaded file path."), "", "", "", gr.update(), None
         return
 
     yield (
@@ -1478,34 +1494,36 @@ def run_trialmatch(pdf_file, condition, language):
             "Step 1/4 — Reading your medical records and running clinical reasoning...\n"
             "(first run may take 2–3 minutes while the model loads)"
         ),
-        "", "", "", gr.update(visible=False), None,
+        "", "", "", gr.update(), None,
     )
     try:
         profile_data = extract_patient_profile(pdf_path)
     except Exception as e:
-        yield _status_html(f"ERROR reading PDF: {e}"), _msg_html(f"Error: {e}", "error"), "", "", gr.update(visible=False), None
+        yield _status_html(f"ERROR reading PDF: {e}"), _msg_html(f"Error: {e}", "error"), "", "", gr.update(), None
         return
 
     if isinstance(profile_data, str):
-        yield _status_html(profile_data), _msg_html(profile_data, "error"), "", "", gr.update(visible=False), None
+        yield _status_html(profile_data), _msg_html(profile_data, "error"), "", "", gr.update(), None
         return
 
     patient_profile    = profile_data["raw_extraction"]
     clinical_reasoning = profile_data["clinical_reasoning"]
     key_flags          = profile_data["key_flags"]
+    used_vision        = profile_data.get("used_vision", False)
     _timings.update(profile_data.get("step_timings", {}))
 
     _mode_label = "ClinicalTrials.gov 🌐 online" if is_online() else f"local database 🔌 offline ({_DB_TRIAL_COUNT:,} trials)"
     t1 = _timings.get("pdf_read", 0) + _timings.get("ai_extract", 0)
+    _vision_note = "  ·  📷 Gemma 4 Vision used (scanned PDF)" if used_vision else ""
     yield _status_html(
         f"Step 2/4 — Searching {_mode_label} for recruiting trials...\n"
-        f"(Step 1 completed in {_fmt_time(t1)})"
-    ), "", "", "", gr.update(visible=False), None
+        f"(Step 1 completed in {_fmt_time(t1)}{_vision_note})"
+    ), "", "", "", gr.update(), None
     t0 = time.time()
     try:
         trials = fetch_trials(condition, max_results=3)
     except Exception as e:
-        yield _status_html(f"ERROR fetching trials: {e}"), _msg_html(f"Error: {e}", "error"), "", "", gr.update(visible=False), None
+        yield _status_html(f"ERROR fetching trials: {e}"), _msg_html(f"Error: {e}", "error"), "", "", gr.update(), None
         return
     _timings["api_fetch"] = time.time() - t0
 
@@ -1514,7 +1532,7 @@ def run_trialmatch(pdf_file, condition, language):
                "• Try a broader keyword (e.g. 'diabetes')\n"
                "• Try an alternative name for the condition\n"
                "• Check your internet connection")
-        yield _status_html("Search complete.", done=True), _msg_html(msg), "", "", gr.update(visible=False), None
+        yield _status_html("Search complete.", done=True), _msg_html(msg), "", "", gr.update(), None
         return
 
     matches      = []
@@ -1527,7 +1545,7 @@ def run_trialmatch(pdf_file, condition, language):
         prev_note   = f"\n(Trial {i} matched in {_fmt_time(t_last_match)})" if i > 0 else ""
         yield _status_html(
             f"Step 3/4 — Matching trial {i + 1} of {total}:\n{short}{prev_note}"
-        ), "", "", "", gr.update(visible=False), None
+        ), "", "", "", gr.update(), None
         t0 = time.time()
         try:
             result = match_patient_to_trial(patient_profile, clinical_reasoning, trial)
@@ -1545,10 +1563,15 @@ def run_trialmatch(pdf_file, condition, language):
                "• Try a broader condition keyword\n"
                "• New trials open regularly — try again in a few days\n"
                "• Consult your doctor about trials they may know of")
-        yield _status_html("Analysis complete.", done=True), _msg_html(msg), "", "", gr.update(visible=False), None
+        yield _status_html("Analysis complete.", done=True), _msg_html(msg), "", "", gr.update(), None
         return
 
     matches = sorted(matches, key=lambda m: m.get("confidence_score", 0), reverse=True)
+
+    yield _status_html(
+        f"Step 4/4 — Building results…\n"
+        f"(Matching {total} trial(s) completed in {_fmt_time(_timings['ai_match'])})"
+    ), "", "", "", gr.update(), None
 
     results_html_str = _format_results_html(matches, total, key_flags)
 
@@ -1558,7 +1581,7 @@ def run_trialmatch(pdf_file, condition, language):
         yield _status_html(
             f"🌐 Translating results to {language}…\n"
             f"(Matching {total} trial(s) completed in {_fmt_time(_timings['ai_match'])})"
-        ), results_html_str, "", "", gr.update(visible=False), None
+        ), results_html_str, "", "", gr.update(), None
         t0 = time.time()
         try:
             t_matches       = translate_matches(matches, language)
@@ -1569,6 +1592,22 @@ def run_trialmatch(pdf_file, condition, language):
 
     _timings["total"] = time.time() - t_pipeline_start
     timing_card       = _format_timing_html(_timings)
+
+    if used_vision:
+        _vision_banner = (
+            '<div style="display:flex;align-items:center;gap:10px;padding:10px 16px;'
+            'margin-bottom:16px;background:linear-gradient(135deg,#0f172a,#1e293b);'
+            'border:1px solid #334155;border-radius:10px;font-family:system-ui,sans-serif;">'
+            '<span style="font-size:1.4rem;">📷</span>'
+            '<div>'
+            '<div style="color:#e2e8f0;font-weight:600;font-size:0.88rem;">'
+            'Gemma 4 Vision — Scanned PDF processed locally</div>'
+            '<div style="color:#94a3b8;font-size:0.78rem;margin-top:2px;">'
+            'No text layer detected · Gemma 4 read the page images directly via Ollama · '
+            'Zero data sent to any external service</div>'
+            '</div></div>'
+        )
+        results_html_str = _vision_banner + results_html_str
 
     # Store everything the enrichment function needs
     enrich_state = {
@@ -1581,18 +1620,19 @@ def run_trialmatch(pdf_file, condition, language):
         "timing_card":      timing_card,
     }
 
+    _vision_done = "  ·  📷 Vision (scanned PDF)" if used_vision else ""
     yield (
         _status_html(
             "Matching complete — click ✨ Generate Reasoning & Emails to enrich results.\n"
             f"(Total pipeline: {_fmt_time(_timings['total'])}  ·  "
             f"Profile: {_fmt_time(t1)}  ·  "
-            f"Matching: {_fmt_time(_timings['ai_match'])})",
+            f"Matching: {_fmt_time(_timings['ai_match'])}{_vision_done})",
             done=True,
         ),
         timing_card + results_html_str,
         "",
         translated_html,
-        gr.update(visible=True),
+        gr.update(interactive=True),
         enrich_state,
     )
 
@@ -1603,7 +1643,7 @@ def run_trialmatch(pdf_file, condition, language):
 
 def generate_enrichment(state):
     if not state or not state.get("matches"):
-        yield _status_html("No results to enrich — run the analysis first.", warn=True), gr.update(), gr.update(), gr.update(), gr.update(visible=False)
+        yield _status_html("No results to enrich — run the analysis first.", warn=True), gr.update(), gr.update(), gr.update(), gr.update()
         return
 
     matches         = state["matches"]
@@ -1625,7 +1665,7 @@ def generate_enrichment(state):
             gr.update(),   # results unchanged while computing
             gr.update(),
             gr.update(),
-            gr.update(visible=False),
+            gr.update(interactive=False),
         )
         m["reasoning_chain"] = generate_reasoning_chain(
             patient_profile,
@@ -1643,7 +1683,7 @@ def generate_enrichment(state):
         yield (
             _status_html("📧 Drafting inquiry emails for MATCH verdicts…"),
             gr.update(), gr.update(), gr.update(),
-            gr.update(visible=False),
+            gr.update(interactive=False),
         )
         email_parts = []
         t0 = time.time()
@@ -1670,7 +1710,7 @@ def generate_enrichment(state):
         timing_card + results_html_str,
         emails_text,
         gr.update(),               # translation already set by main pipeline — leave it
-        gr.update(visible=False),
+        gr.update(interactive=False),
     )
 
 
@@ -2122,12 +2162,13 @@ with gr.Blocks(title="TrialMatch") as demo:
                 # ── Right: outputs ─────────────────────────────────────────────
                 with gr.Column(scale=2, min_width=380):
                     status_box   = gr.HTML(value=_STATUS_PLACEHOLDER, elem_id="tm-status")
-                    results_html = gr.HTML(value=_RESULTS_PLACEHOLDER)
                     enrich_btn   = gr.Button(
                         "✨  Generate Reasoning & Emails",
                         variant="primary",
-                        visible=False,
+                        visible=True,
+                        interactive=False,
                     )
+                    results_html = gr.HTML(value=_RESULTS_PLACEHOLDER)
 
                     with gr.Accordion("📧  Draft Inquiry Emails  (MATCH verdicts only)", open=False):
                         email_box = gr.Textbox(
@@ -2191,12 +2232,15 @@ with gr.Blocks(title="TrialMatch") as demo:
                 '<code style="background:var(--surface-2);padding:2px 6px;border-radius:4px;">'
                 'gemma4:e4b</code> is installed before running the analysis.</p>'
             )
-            check_btn    = gr.Button("Check System", variant="secondary")
+            with gr.Row():
+                check_btn      = gr.Button("Check System", variant="secondary")
+                speed_test_btn = gr.Button("Run Speed Test", variant="secondary")
             check_output = gr.HTML(
                 value='<div style="color:var(--text-3);font-family:system-ui,sans-serif;'
                       'font-size:0.86rem;padding:8px 0;">Click Check System to begin…</div>'
             )
             check_btn.click(fn=check_system, inputs=[], outputs=[check_output])
+            speed_test_btn.click(fn=run_speed_test, inputs=[], outputs=[check_output])
 
     gr.HTML(_DISCLAIMER_HTML)
 
