@@ -1,0 +1,1076 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+<title>TrialMatch — AI Clinical Trial Matching, Fully Local</title>
+<meta name="description" content="Gemma 4 reads your medical records and finds clinical trials you qualify for — entirely on your laptop. No cloud. No API key. Zero data transmitted."/>
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+<link href="https://fonts.googleapis.com/css2?family=Inter:ital,wght@0,300;0,400;0,500;0,600;0,700;0,800;0,900;1,400&display=swap" rel="stylesheet"/>
+<style>
+:root{
+  --green:#00ff88;--teal:#00d4ff;--blue:#3b82f6;--purple:#8b5cf6;
+  --bg:#020817;--bg2:#0a0f1e;--bg3:#0d1424;
+  --card:rgba(255,255,255,.04);--card2:rgba(255,255,255,.06);
+  --border:rgba(255,255,255,.07);--border2:rgba(255,255,255,.12);
+  --text:#e2e8f0;--muted:#64748b;--muted2:#94a3b8;
+  --r:16px;--r2:24px;
+}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+html{scroll-behavior:smooth;font-size:16px}
+body{font-family:'Inter',system-ui,sans-serif;background:var(--bg);color:var(--text);overflow-x:hidden;-webkit-font-smoothing:antialiased}
+
+/* ── SCROLLBAR ── */
+::-webkit-scrollbar{width:4px}
+::-webkit-scrollbar-track{background:var(--bg)}
+::-webkit-scrollbar-thumb{background:rgba(0,255,136,.3);border-radius:2px}
+
+/* ── SCROLL PROGRESS ── */
+#progress{position:fixed;top:0;left:0;height:2px;background:linear-gradient(90deg,var(--green),var(--teal));z-index:999;width:0%;transition:width .1s linear}
+
+/* ── CURSOR GLOW ── */
+#cursor{position:fixed;width:300px;height:300px;border-radius:50%;background:radial-gradient(circle,rgba(0,255,136,.06) 0%,transparent 70%);pointer-events:none;z-index:0;transform:translate(-50%,-50%);transition:opacity .3s}
+
+/* ── NAV ── */
+nav{
+  position:fixed;top:0;left:0;right:0;z-index:100;
+  display:flex;align-items:center;justify-content:space-between;
+  padding:1rem 4rem;
+  background:rgba(2,8,23,.85);backdrop-filter:blur(24px);
+  border-bottom:1px solid var(--border);
+  transition:padding .3s;
+}
+nav.scrolled{padding:.75rem 4rem;background:rgba(2,8,23,.95)}
+.nav-logo{display:flex;align-items:center;gap:.5rem;text-decoration:none}
+.logo-mark{width:28px;height:28px;border-radius:8px;background:linear-gradient(135deg,var(--green),var(--teal));display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:900;color:#000;flex-shrink:0}
+.logo-text{font-size:1.1rem;font-weight:800;color:#fff;letter-spacing:-.02em}
+.logo-text span{color:var(--green)}
+.nav-links{display:flex;gap:2.5rem;list-style:none}
+.nav-links a{color:var(--muted);text-decoration:none;font-size:.875rem;font-weight:500;transition:color .2s;position:relative}
+.nav-links a::after{content:'';position:absolute;bottom:-2px;left:0;right:0;height:1px;background:var(--green);transform:scaleX(0);transition:transform .2s}
+.nav-links a:hover{color:#fff}
+.nav-links a:hover::after{transform:scaleX(1)}
+.nav-right{display:flex;align-items:center;gap:1rem}
+.nav-btn{background:linear-gradient(135deg,rgba(0,255,136,.15),rgba(0,212,255,.1));border:1px solid rgba(0,255,136,.25);color:var(--green);padding:.5rem 1.2rem;border-radius:8px;font-size:.8rem;font-weight:700;text-decoration:none;transition:all .2s;letter-spacing:.02em}
+.nav-btn:hover{background:linear-gradient(135deg,rgba(0,255,136,.25),rgba(0,212,255,.15));border-color:rgba(0,255,136,.5);box-shadow:0 0 20px rgba(0,255,136,.15)}
+.hamburger{display:none;flex-direction:column;gap:5px;cursor:pointer;padding:.4rem;background:none;border:none}
+.hamburger span{display:block;width:22px;height:2px;background:var(--muted2);border-radius:2px;transition:all .3s}
+.hamburger.open span:nth-child(1){transform:translateY(7px) rotate(45deg)}
+.hamburger.open span:nth-child(2){opacity:0}
+.hamburger.open span:nth-child(3){transform:translateY(-7px) rotate(-45deg)}
+.mobile-menu{display:none;position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(2,8,23,.98);z-index:99;flex-direction:column;align-items:center;justify-content:center;gap:2.5rem}
+.mobile-menu.open{display:flex}
+.mobile-menu a{color:var(--text);text-decoration:none;font-size:1.5rem;font-weight:700;transition:color .2s}
+.mobile-menu a:hover{color:var(--green)}
+
+/* ── HERO ── */
+.hero{
+  position:relative;min-height:100vh;display:flex;
+  align-items:center;padding:8rem 4rem 6rem;
+  overflow:hidden;
+}
+#hero-canvas{position:absolute;inset:0;opacity:.6}
+.hero-content{position:relative;z-index:1;display:grid;grid-template-columns:1fr 1fr;gap:4rem;align-items:center;max-width:1300px;margin:0 auto;width:100%}
+.hero-badge{display:inline-flex;align-items:center;gap:.5rem;background:rgba(0,255,136,.08);border:1px solid rgba(0,255,136,.2);border-radius:100px;padding:.4rem 1rem;font-size:.7rem;font-weight:700;color:var(--green);letter-spacing:.1em;text-transform:uppercase;margin-bottom:1.5rem;animation:fadeUp .7s ease both}
+.badge-live{width:6px;height:6px;border-radius:50%;background:var(--green);box-shadow:0 0 8px var(--green);animation:livepulse 2s infinite}
+@keyframes livepulse{0%,100%{box-shadow:0 0 4px var(--green)}50%{box-shadow:0 0 12px var(--green),0 0 24px rgba(0,255,136,.3)}}
+.hero-h1{font-size:clamp(2.8rem,5vw,5.5rem);font-weight:900;line-height:1.0;letter-spacing:-.04em;color:#fff;margin-bottom:1.2rem;animation:fadeUp .7s ease .1s both}
+.hero-h1 .line-green{color:var(--green);text-shadow:0 0 60px rgba(0,255,136,.3)}
+.hero-h1 .line-muted{color:var(--muted)}
+.hero-sub{font-size:1.05rem;color:var(--muted2);line-height:1.8;margin-bottom:2rem;max-width:520px;animation:fadeUp .7s ease .2s both}
+.hero-sub strong{color:var(--text)}
+.hero-actions{display:flex;gap:.875rem;flex-wrap:wrap;margin-bottom:2.5rem;animation:fadeUp .7s ease .3s both}
+.btn-glow{background:var(--green);color:#000;padding:.8rem 1.8rem;border-radius:10px;font-size:.9rem;font-weight:800;text-decoration:none;transition:all .25s;box-shadow:0 0 30px rgba(0,255,136,.2);display:inline-flex;align-items:center;gap:.5rem;letter-spacing:.01em}
+.btn-glow:hover{transform:translateY(-2px);box-shadow:0 0 50px rgba(0,255,136,.4),0 8px 25px rgba(0,255,136,.15)}
+.btn-ghost{background:var(--card);border:1px solid var(--border2);color:var(--text);padding:.8rem 1.8rem;border-radius:10px;font-size:.9rem;font-weight:600;text-decoration:none;transition:all .25s;display:inline-flex;align-items:center;gap:.5rem}
+.btn-ghost:hover{background:var(--card2);border-color:rgba(255,255,255,.2);transform:translateY(-2px)}
+.hero-trust{display:flex;align-items:center;gap:1.5rem;flex-wrap:wrap;animation:fadeUp .7s ease .4s both}
+.trust-item{display:flex;align-items:center;gap:.4rem;font-size:.75rem;color:var(--muted);font-weight:600}
+.trust-dot{width:4px;height:4px;border-radius:50%;background:var(--muted)}
+
+/* ── HERO RIGHT — ANIMATED DEMO ── */
+.hero-demo{position:relative;animation:fadeUp .7s ease .3s both}
+.demo-card{
+  background:linear-gradient(160deg,rgba(13,20,36,.98),rgba(6,10,20,.98));
+  border:1px solid var(--border2);border-radius:20px;
+  overflow:hidden;box-shadow:0 40px 80px rgba(0,0,0,.5),0 0 0 1px rgba(255,255,255,.04);
+  position:relative;
+}
+.demo-card::before{content:'';position:absolute;top:-1px;left:15%;right:15%;height:1px;background:linear-gradient(90deg,transparent,var(--green),transparent);opacity:.6}
+.demo-bar{display:flex;align-items:center;justify-content:space-between;padding:1rem 1.2rem;border-bottom:1px solid var(--border)}
+.demo-dots{display:flex;gap:.4rem}
+.dd{width:10px;height:10px;border-radius:50%}
+.dd1{background:#ff5f57}.dd2{background:#febc2e}.dd3{background:#28c840}
+.demo-title{font-size:.7rem;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.1em}
+.demo-status{display:flex;align-items:center;gap:.4rem;font-size:.65rem;color:var(--green);font-weight:700}
+.demo-body{padding:1.2rem}
+.demo-step{display:flex;align-items:center;gap:.75rem;padding:.6rem .8rem;border-radius:10px;background:rgba(0,255,136,.04);border:1px solid rgba(0,255,136,.1);margin-bottom:.75rem;font-size:.75rem;color:var(--muted2)}
+.demo-step-icon{font-size:1rem;flex-shrink:0}
+.demo-step-text strong{display:block;color:var(--text);font-weight:600;font-size:.75rem;margin-bottom:.1rem}
+.demo-step-bar{height:2px;border-radius:2px;background:rgba(255,255,255,.06);margin-top:.4rem}
+.demo-step-fill{height:100%;border-radius:2px;background:linear-gradient(90deg,var(--green),var(--teal));animation:fillBar 2s ease 1s both}
+@keyframes fillBar{from{width:0}to{width:100%}}
+
+.demo-result{margin-top:.75rem}
+.dr-item{display:flex;align-items:center;gap:.75rem;padding:.7rem .8rem;border-radius:10px;border:1px solid var(--border);margin-bottom:.5rem;position:relative;overflow:hidden;transition:all .3s}
+.dr-item.m{border-color:rgba(0,255,136,.25);background:rgba(0,255,136,.04)}
+.dr-item.p{border-color:rgba(255,170,0,.2);background:rgba(255,170,0,.03)}
+.dr-item.n{border-color:rgba(255,60,60,.15);background:rgba(255,60,60,.02);opacity:.7}
+.dr-bar{width:3px;height:100%;border-radius:3px;position:absolute;left:0;top:0;bottom:0}
+.dr-bar.m{background:var(--green)}
+.dr-bar.p{background:#ffaa00}
+.dr-bar.n{background:#ff4444}
+.dr-info{flex:1;padding-left:.2rem}
+.dr-name{font-size:.7rem;font-weight:600;color:var(--muted2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:200px}
+.dr-conf{font-size:.6rem;color:var(--muted);margin-top:.15rem}
+.dr-v{font-size:.6rem;font-weight:800;letter-spacing:.08em;padding:.2rem .6rem;border-radius:100px;flex-shrink:0}
+.dr-v.m{background:rgba(0,255,136,.15);color:var(--green)}
+.dr-v.p{background:rgba(255,170,0,.15);color:#ffaa00}
+.dr-v.n{background:rgba(255,60,60,.12);color:#ff6666}
+.demo-email{margin-top:.75rem;padding:.75rem .8rem;border-radius:10px;background:rgba(0,212,255,.04);border:1px solid rgba(0,212,255,.15);display:flex;align-items:center;gap:.6rem;font-size:.7rem;color:var(--teal);font-weight:600;animation:slideIn .5s ease 3s both}
+@keyframes slideIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
+
+/* ── TICKER ── */
+.ticker-wrap{overflow:hidden;background:rgba(0,255,136,.03);border-top:1px solid rgba(0,255,136,.08);border-bottom:1px solid rgba(0,255,136,.08);padding:.75rem 0;position:relative}
+.ticker-wrap::before,.ticker-wrap::after{content:'';position:absolute;top:0;bottom:0;width:100px;z-index:1}
+.ticker-wrap::before{left:0;background:linear-gradient(90deg,var(--bg),transparent)}
+.ticker-wrap::after{right:0;background:linear-gradient(-90deg,var(--bg),transparent)}
+.ticker{display:flex;gap:2.5rem;white-space:nowrap;animation:ticker 30s linear infinite;width:max-content}
+.ticker span{font-size:.7rem;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--green);opacity:.6}
+.ticker .sep{color:var(--muted);opacity:.2}
+@keyframes ticker{from{transform:translateX(0)}to{transform:translateX(-50%)}}
+
+/* ── SECTION BASE ── */
+.section{padding:7rem 4rem;max-width:1300px;margin:0 auto}
+.section-full{padding:7rem 4rem;position:relative}
+.sec-label{font-size:.7rem;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:var(--green);margin-bottom:.875rem}
+.sec-title{font-size:clamp(2rem,3.5vw,3.2rem);font-weight:900;letter-spacing:-.03em;color:#fff;line-height:1.1;margin-bottom:1rem}
+.sec-title span{color:var(--green)}
+.sec-title .teal{color:var(--teal)}
+.sec-sub{font-size:1rem;color:var(--muted);max-width:540px;line-height:1.75}
+
+/* ── PROBLEM ── */
+.problem-grid{display:grid;grid-template-columns:1fr 1fr;gap:5rem;align-items:center;margin-top:0}
+.problem-stat-stack{display:flex;flex-direction:column;gap:1.2rem}
+.prob-stat{background:var(--card);border:1px solid var(--border);border-radius:var(--r);padding:1.5rem 2rem;position:relative;overflow:hidden;transition:all .3s}
+.prob-stat::before{content:'';position:absolute;left:0;top:0;bottom:0;width:3px;border-radius:3px 0 0 3px}
+.prob-stat.s1::before{background:var(--green)}
+.prob-stat.s2::before{background:var(--teal)}
+.prob-stat.s3::before{background:var(--purple)}
+.prob-stat:hover{transform:translateX(4px);border-color:var(--border2)}
+.ps-num{font-size:2.5rem;font-weight:900;letter-spacing:-.04em;line-height:1;margin-bottom:.3rem}
+.ps-num.c1{color:var(--green)}.ps-num.c2{color:var(--teal)}.ps-num.c3{color:var(--purple)}
+.ps-label{font-size:.875rem;color:var(--muted);line-height:1.5}
+.ps-label strong{color:var(--muted2)}
+.problem-text .sec-sub{max-width:100%;margin-top:1.5rem;font-size:1.05rem;line-height:1.8}
+.problem-text blockquote{margin-top:2rem;padding:1.5rem 2rem;background:var(--card);border:1px solid var(--border);border-left:3px solid var(--green);border-radius:0 var(--r) var(--r) 0;font-size:1rem;color:var(--muted2);line-height:1.7;font-style:italic}
+
+/* ── HOW IT WORKS ── */
+.hiw-bg{background:var(--bg2);border-top:1px solid var(--border);border-bottom:1px solid var(--border)}
+.hiw-inner{max-width:1300px;margin:0 auto;padding:7rem 4rem}
+.steps-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:1.5rem;margin-top:4rem;position:relative}
+.steps-grid::before{content:'';position:absolute;top:52px;left:calc(25% / 2);right:calc(25% / 2);height:1px;background:linear-gradient(90deg,var(--green),var(--teal));opacity:.2;pointer-events:none}
+.step-card{background:var(--card);border:1px solid var(--border);border-radius:var(--r2);padding:2rem 1.5rem;position:relative;overflow:hidden;transition:all .3s;cursor:default}
+.step-card:hover{transform:translateY(-6px);border-color:rgba(0,255,136,.2);box-shadow:0 20px 40px rgba(0,0,0,.3)}
+.step-card::after{content:'';position:absolute;inset:0;background:linear-gradient(135deg,rgba(0,255,136,.03),transparent);opacity:0;transition:opacity .3s}
+.step-card:hover::after{opacity:1}
+.step-num{font-size:.65rem;font-weight:800;letter-spacing:.12em;color:var(--green);text-transform:uppercase;margin-bottom:1.2rem;opacity:.7}
+.step-icon-wrap{width:52px;height:52px;border-radius:14px;display:flex;align-items:center;justify-content:center;font-size:1.4rem;margin-bottom:1.2rem;position:relative}
+.si1{background:rgba(0,255,136,.1);border:1px solid rgba(0,255,136,.15)}
+.si2{background:rgba(0,212,255,.1);border:1px solid rgba(0,212,255,.15)}
+.si3{background:rgba(139,92,246,.1);border:1px solid rgba(139,92,246,.15)}
+.si4{background:rgba(59,130,246,.1);border:1px solid rgba(59,130,246,.15)}
+.step-card h3{font-size:1rem;font-weight:700;color:#fff;margin-bottom:.5rem}
+.step-card p{font-size:.825rem;color:var(--muted);line-height:1.6}
+.step-connector{position:absolute;top:52px;right:-1px;width:1px;height:1px;z-index:1}
+
+/* ── DEMO SECTION ── */
+.demo-section{max-width:1300px;margin:0 auto;padding:7rem 4rem}
+.demo-window{
+  background:linear-gradient(160deg,var(--bg2),var(--bg));
+  border:1px solid var(--border2);border-radius:var(--r2);
+  overflow:hidden;box-shadow:0 60px 120px rgba(0,0,0,.4);
+  position:relative;
+}
+.demo-window::before{content:'';position:absolute;top:-1px;left:20%;right:20%;height:1px;background:linear-gradient(90deg,transparent,var(--green),transparent)}
+.dw-bar{display:flex;align-items:center;gap:1rem;padding:1.2rem 1.5rem;border-bottom:1px solid var(--border);background:rgba(0,0,0,.2)}
+.dw-dots{display:flex;gap:.4rem}
+.dw-d{width:12px;height:12px;border-radius:50%}
+.dw-d1{background:#ff5f57}.dw-d2{background:#febc2e}.dw-d3{background:#28c840}
+.dw-url{flex:1;background:rgba(255,255,255,.04);border:1px solid var(--border);border-radius:6px;padding:.35rem 1rem;font-size:.75rem;color:var(--muted);font-family:monospace;text-align:center}
+.dw-body{display:grid;grid-template-columns:1fr 1fr;gap:0}
+.dw-left{padding:2rem;border-right:1px solid var(--border)}
+.dw-right{padding:2rem;background:rgba(0,0,0,.15)}
+.dw-label{font-size:.65rem;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);margin-bottom:1rem}
+.upload-zone{border:1.5px dashed rgba(0,255,136,.2);border-radius:12px;padding:2rem;text-align:center;background:rgba(0,255,136,.02);margin-bottom:1rem;transition:all .3s}
+.upload-zone:hover{border-color:rgba(0,255,136,.4);background:rgba(0,255,136,.04)}
+.upload-icon{font-size:2rem;margin-bottom:.5rem}
+.upload-text{font-size:.8rem;color:var(--muted);line-height:1.5}
+.upload-text strong{color:var(--green);display:block;font-size:.875rem;margin-bottom:.25rem}
+.input-row{display:flex;gap:.5rem;margin-bottom:.5rem}
+.fake-input{flex:1;background:rgba(255,255,255,.04);border:1px solid var(--border2);border-radius:8px;padding:.6rem .875rem;font-size:.75rem;color:var(--muted2)}
+.fake-select{background:rgba(255,255,255,.04);border:1px solid var(--border2);border-radius:8px;padding:.6rem .875rem;font-size:.75rem;color:var(--muted2)}
+.run-btn{width:100%;background:linear-gradient(135deg,var(--green),#00cc6a);color:#000;border:none;border-radius:8px;padding:.75rem;font-size:.8rem;font-weight:800;cursor:pointer;margin-top:.75rem;letter-spacing:.02em;transition:all .2s}
+.run-btn:hover{opacity:.9;transform:translateY(-1px)}
+.result-item{background:var(--card);border:1px solid var(--border);border-radius:10px;padding:.875rem 1rem;margin-bottom:.625rem;position:relative;overflow:hidden;transition:all .3s}
+.result-item.match{border-color:rgba(0,255,136,.25);background:rgba(0,255,136,.04)}
+.result-item.partial{border-color:rgba(255,170,0,.2)}
+.result-item.no{opacity:.6}
+.ri-bar{position:absolute;left:0;top:0;bottom:0;width:3px;border-radius:3px 0 0 3px}
+.ri-bar.m{background:var(--green)}.ri-bar.p{background:#ffaa00}.ri-bar.n{background:#ff4444}
+.ri-top{display:flex;align-items:center;justify-content:space-between;margin-bottom:.4rem}
+.ri-name{font-size:.75rem;font-weight:600;color:var(--muted2);padding-left:.2rem}
+.ri-verdict{font-size:.6rem;font-weight:800;letter-spacing:.08em;padding:.2rem .6rem;border-radius:100px}
+.rv-m{background:rgba(0,255,136,.15);color:var(--green)}
+.rv-p{background:rgba(255,170,0,.15);color:#ffaa00}
+.rv-n{background:rgba(255,60,60,.12);color:#ff5555}
+.ri-conf{height:3px;border-radius:2px;background:rgba(255,255,255,.05);margin:0 .2rem .4rem}
+.ri-conf-fill{height:100%;border-radius:2px}
+.cf-m{background:linear-gradient(90deg,var(--green),var(--teal))}
+.cf-p{background:linear-gradient(90deg,#ffaa00,#ff6b00)}
+.cf-n{background:#ff5555}
+.ri-reason{font-size:.65rem;color:var(--muted);line-height:1.4;padding-left:.2rem}
+
+/* ── FEATURES ── */
+.features-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:1.5rem;margin-top:4rem}
+.feat-card{
+  background:var(--card);border:1px solid var(--border);border-radius:var(--r2);
+  padding:2rem;transition:all .35s;position:relative;overflow:hidden;cursor:default;
+}
+.feat-card::before{content:'';position:absolute;top:0;left:0;right:0;height:1px;background:linear-gradient(90deg,transparent,rgba(0,255,136,.3),transparent);opacity:0;transition:opacity .3s}
+.feat-card:hover{transform:translateY(-6px) rotateX(2deg);border-color:rgba(255,255,255,.12);box-shadow:0 24px 48px rgba(0,0,0,.3)}
+.feat-card:hover::before{opacity:1}
+.feat-icon{width:48px;height:48px;border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:1.25rem;margin-bottom:1.5rem}
+.fi-g{background:rgba(0,255,136,.1);border:1px solid rgba(0,255,136,.15)}
+.fi-t{background:rgba(0,212,255,.1);border:1px solid rgba(0,212,255,.15)}
+.fi-b{background:rgba(59,130,246,.1);border:1px solid rgba(59,130,246,.15)}
+.fi-p{background:rgba(139,92,246,.1);border:1px solid rgba(139,92,246,.15)}
+.fi-o{background:rgba(251,146,60,.1);border:1px solid rgba(251,146,60,.15)}
+.fi-r{background:rgba(248,113,113,.1);border:1px solid rgba(248,113,113,.15)}
+.feat-card h3{font-size:1rem;font-weight:700;color:#fff;margin-bottom:.5rem}
+.feat-card p{font-size:.85rem;color:var(--muted);line-height:1.65}
+.feat-tag{display:inline-block;margin-top:.875rem;font-size:.65rem;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--green);background:rgba(0,255,136,.07);border:1px solid rgba(0,255,136,.12);border-radius:100px;padding:.25rem .7rem}
+
+/* ── PRIVACY ── */
+.privacy-section{position:relative;overflow:hidden;background:radial-gradient(ellipse at center,rgba(0,255,136,.04) 0%,transparent 70%),var(--bg2);border-top:1px solid var(--border);border-bottom:1px solid var(--border)}
+.privacy-inner{max-width:1300px;margin:0 auto;padding:8rem 4rem;display:grid;grid-template-columns:1fr 1fr;gap:6rem;align-items:center}
+.privacy-glow{position:absolute;width:600px;height:600px;border-radius:50%;background:radial-gradient(circle,rgba(0,255,136,.06) 0%,transparent 60%);top:50%;left:25%;transform:translate(-50%,-50%);pointer-events:none}
+.privacy-text h2{font-size:clamp(2.2rem,4vw,4rem);font-weight:900;letter-spacing:-.04em;color:#fff;line-height:1.05;margin-bottom:1.5rem}
+.privacy-text h2 span{color:var(--green);display:block}
+.privacy-text p{font-size:1rem;color:var(--muted);line-height:1.8;margin-bottom:2rem}
+.privacy-chips{display:flex;flex-wrap:wrap;gap:.625rem}
+.priv-chip{background:rgba(0,255,136,.06);border:1px solid rgba(0,255,136,.12);border-radius:100px;padding:.45rem 1rem;font-size:.75rem;font-weight:600;color:var(--green);transition:all .2s}
+.priv-chip:hover{background:rgba(0,255,136,.12);border-color:rgba(0,255,136,.25)}
+.privacy-visual{position:relative}
+.lock-card{background:linear-gradient(160deg,rgba(13,20,36,.98),rgba(6,10,20,.98));border:1px solid var(--border2);border-radius:var(--r2);padding:2.5rem;text-align:center;box-shadow:0 40px 80px rgba(0,0,0,.4);position:relative;overflow:hidden}
+.lock-card::before{content:'';position:absolute;top:-1px;left:20%;right:20%;height:1px;background:linear-gradient(90deg,transparent,var(--green),transparent)}
+.lock-icon{font-size:3.5rem;margin-bottom:1rem;display:block;animation:lockbob 3s ease-in-out infinite}
+@keyframes lockbob{0%,100%{transform:translateY(0)}50%{transform:translateY(-8px)}}
+.lock-card h3{font-size:1.2rem;font-weight:800;color:#fff;margin-bottom:.5rem}
+.lock-card p{font-size:.85rem;color:var(--muted);line-height:1.6;margin-bottom:1.5rem}
+.zero-cloud{display:inline-flex;align-items:center;gap:.5rem;background:rgba(0,255,136,.08);border:1px solid rgba(0,255,136,.2);border-radius:8px;padding:.6rem 1.2rem;font-size:.8rem;font-weight:700;color:var(--green);letter-spacing:.06em;text-transform:uppercase}
+.data-flow{margin-top:1.5rem;display:flex;flex-direction:column;gap:.5rem}
+.df-item{display:flex;align-items:center;gap:.75rem;padding:.6rem .875rem;background:rgba(255,255,255,.03);border:1px solid var(--border);border-radius:8px;font-size:.75rem;color:var(--muted2)}
+.df-item span:first-child{font-size:.9rem}
+.df-check{margin-left:auto;color:var(--green);font-weight:700;font-size:.7rem}
+
+/* ── LANGUAGES ── */
+.lang-section{max-width:1300px;margin:0 auto;padding:7rem 4rem}
+.lang-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:1rem;margin-top:3rem}
+.lang-card{background:var(--card);border:1px solid var(--border);border-radius:var(--r);padding:1.2rem 1rem;text-align:center;cursor:default;transition:all .3s;position:relative;overflow:hidden}
+.lang-card::before{content:'';position:absolute;inset:0;background:linear-gradient(135deg,rgba(0,212,255,.04),transparent);opacity:0;transition:opacity .3s}
+.lang-card:hover{transform:translateY(-4px);border-color:rgba(0,212,255,.25);box-shadow:0 12px 30px rgba(0,0,0,.2)}
+.lang-card:hover::before{opacity:1}
+.lang-script{display:block;font-size:1.5rem;margin-bottom:.35rem;line-height:1.2}
+.lang-name{font-size:.75rem;font-weight:700;color:var(--muted2);letter-spacing:.02em}
+.lang-native{font-size:.65rem;color:var(--muted);margin-top:.15rem}
+.lang-note{margin-top:2.5rem;padding:1.5rem 2rem;background:var(--card);border:1px solid var(--border);border-radius:var(--r);border-left:3px solid var(--teal)}
+.lang-note p{font-size:.875rem;color:var(--muted);line-height:1.7}
+.lang-note strong{color:var(--teal)}
+
+/* ── STATS ── */
+.stats-section{background:var(--bg2);border-top:1px solid var(--border);border-bottom:1px solid var(--border);padding:5rem 4rem}
+.stats-inner{max-width:1300px;margin:0 auto}
+.stats-grid{display:grid;grid-template-columns:repeat(5,1fr);gap:0;margin-top:3.5rem}
+.stat-item{padding:2rem 1.5rem;text-align:center;border-right:1px solid var(--border);position:relative;overflow:hidden}
+.stat-item:last-child{border-right:none}
+.stat-item::before{content:'';position:absolute;bottom:0;left:50%;transform:translateX(-50%);width:40%;height:1px;background:linear-gradient(90deg,transparent,var(--green),transparent);opacity:0;transition:opacity .3s}
+.stat-item:hover::before{opacity:1}
+.stat-number{font-size:2.8rem;font-weight:900;letter-spacing:-.04em;line-height:1;margin-bottom:.35rem;color:#fff}
+.stat-number .unit{color:var(--green)}
+.stat-desc{font-size:.75rem;color:var(--muted);font-weight:500;text-transform:uppercase;letter-spacing:.06em}
+
+/* ── TECH ── */
+.tech-section{max-width:1300px;margin:0 auto;padding:7rem 4rem}
+.tech-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:.875rem;margin-top:3rem}
+.tech-card{background:var(--card);border:1px solid var(--border);border-radius:var(--r);padding:1.2rem 1.5rem;display:flex;align-items:center;gap:.75rem;transition:all .25s;cursor:default}
+.tech-card:hover{background:var(--card2);border-color:var(--border2);transform:translateY(-2px)}
+.tech-emoji{font-size:1.2rem}
+.tech-info{flex:1}
+.tech-name{font-size:.8rem;font-weight:700;color:var(--text)}
+.tech-role{font-size:.65rem;color:var(--muted);margin-top:.1rem}
+.hackathon-badge{margin-top:3rem;padding:2rem 2.5rem;background:linear-gradient(135deg,rgba(0,255,136,.05),rgba(0,212,255,.05));border:1px solid rgba(0,255,136,.15);border-radius:var(--r2);display:flex;align-items:center;gap:2rem;flex-wrap:wrap}
+.hb-icon{font-size:3rem;flex-shrink:0}
+.hb-text h3{font-size:1.1rem;font-weight:800;color:#fff;margin-bottom:.25rem}
+.hb-text p{font-size:.875rem;color:var(--muted);line-height:1.6}
+.hb-text a{color:var(--green);text-decoration:none;font-weight:600}
+.hb-text a:hover{text-decoration:underline}
+
+/* ── CTA ── */
+.cta-section{position:relative;overflow:hidden;padding:8rem 4rem;text-align:center;background:radial-gradient(ellipse at center,rgba(0,255,136,.05) 0%,transparent 60%)}
+.cta-section::before{content:'';position:absolute;top:-1px;left:0;right:0;height:1px;background:linear-gradient(90deg,transparent,var(--green),transparent)}
+.cta-inner{max-width:700px;margin:0 auto;position:relative;z-index:1}
+.cta-section h2{font-size:clamp(2.5rem,5vw,4.5rem);font-weight:900;letter-spacing:-.04em;color:#fff;line-height:1.05;margin-bottom:1.2rem}
+.cta-section h2 span{color:var(--green)}
+.cta-section p{font-size:1.05rem;color:var(--muted);margin-bottom:2.5rem;line-height:1.75}
+.cta-btns{display:flex;gap:1rem;justify-content:center;flex-wrap:wrap}
+
+/* ── FOOTER ── */
+footer{border-top:1px solid var(--border);background:var(--bg2);padding:3rem 4rem}
+.footer-inner{max-width:1300px;margin:0 auto;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:1.5rem}
+.footer-logo{display:flex;align-items:center;gap:.5rem;text-decoration:none}
+.footer-logo .logo-text{font-size:1rem;font-weight:800;color:#fff}
+.footer-logo .logo-text span{color:var(--green)}
+.footer-copy{font-size:.8rem;color:var(--muted);line-height:1.6}
+.footer-links{display:flex;gap:1.5rem}
+.footer-links a{font-size:.8rem;color:var(--muted);text-decoration:none;transition:color .2s;font-weight:500}
+.footer-links a:hover{color:var(--text)}
+
+/* ── ANIMATIONS ── */
+@keyframes fadeUp{from{opacity:0;transform:translateY(24px)}to{opacity:1;transform:translateY(0)}}
+@keyframes fadeIn{from{opacity:0}to{opacity:1}}
+
+.reveal{opacity:0;transform:translateY(28px);transition:opacity .7s ease,transform .7s ease}
+.reveal.visible{opacity:1;transform:translateY(0)}
+.reveal-left{opacity:0;transform:translateX(-28px);transition:opacity .7s ease,transform .7s ease}
+.reveal-left.visible{opacity:1;transform:translateX(0)}
+.reveal-right{opacity:0;transform:translateX(28px);transition:opacity .7s ease,transform .7s ease}
+.reveal-right.visible{opacity:1;transform:translateX(0)}
+.stagger>*{opacity:0;transform:translateY(20px);transition:opacity .5s ease,transform .5s ease}
+.stagger.visible>*:nth-child(1){opacity:1;transform:translateY(0);transition-delay:.05s}
+.stagger.visible>*:nth-child(2){opacity:1;transform:translateY(0);transition-delay:.12s}
+.stagger.visible>*:nth-child(3){opacity:1;transform:translateY(0);transition-delay:.19s}
+.stagger.visible>*:nth-child(4){opacity:1;transform:translateY(0);transition-delay:.26s}
+.stagger.visible>*:nth-child(5){opacity:1;transform:translateY(0);transition-delay:.33s}
+.stagger.visible>*:nth-child(6){opacity:1;transform:translateY(0);transition-delay:.40s}
+.stagger.visible>*:nth-child(7){opacity:1;transform:translateY(0);transition-delay:.47s}
+.stagger.visible>*:nth-child(8){opacity:1;transform:translateY(0);transition-delay:.54s}
+.stagger.visible>*:nth-child(9){opacity:1;transform:translateY(0);transition-delay:.61s}
+
+/* ── RESPONSIVE ── */
+@media(max-width:1024px){
+  nav{padding:.875rem 2rem}
+  nav.scrolled{padding:.75rem 2rem}
+  .nav-links{display:none}
+  .hamburger{display:flex}
+  .hero{padding:7rem 2rem 5rem}
+  .hero-content{grid-template-columns:1fr;gap:3rem}
+  .hero-demo{order:-1}
+  .problem-grid{grid-template-columns:1fr;gap:3rem}
+  .hiw-inner{padding:5rem 2rem}
+  .steps-grid{grid-template-columns:repeat(2,1fr)}
+  .steps-grid::before{display:none}
+  .demo-section{padding:5rem 2rem}
+  .dw-body{grid-template-columns:1fr}
+  .dw-right{border-top:1px solid var(--border);border-right:0}
+  .features-grid{grid-template-columns:repeat(2,1fr);padding:0 2rem}
+  .privacy-inner{grid-template-columns:1fr;gap:3rem;padding:5rem 2rem}
+  .lang-section{padding:5rem 2rem}
+  .stats-grid{grid-template-columns:repeat(3,1fr)}
+  .stat-item:nth-child(3){border-right:none}
+  .tech-section{padding:5rem 2rem}
+  .section{padding:5rem 2rem}
+  .section-full{padding:5rem 2rem}
+  .cta-section{padding:6rem 2rem}
+  footer{padding:2.5rem 2rem}
+}
+@media(max-width:640px){
+  .hero-h1{font-size:2.5rem}
+  .hero-demo{display:none}
+  .steps-grid{grid-template-columns:1fr}
+  .features-grid{grid-template-columns:1fr;padding:0}
+  .stats-grid{grid-template-columns:repeat(2,1fr)}
+  .stat-item:nth-child(2){border-right:none}
+  .stat-item:nth-child(3){border-right:1px solid var(--border)}
+  .stat-item:nth-child(4){border-right:none}
+  .stat-item:nth-child(5){grid-column:span 2;border-right:none}
+  .footer-inner{flex-direction:column;text-align:center}
+  .footer-links{justify-content:center}
+  .lang-grid{grid-template-columns:repeat(3,1fr)}
+  .tech-grid{grid-template-columns:repeat(2,1fr)}
+  .hackathon-badge{flex-direction:column;text-align:center}
+}
+</style>
+</head>
+<body>
+
+<!-- Cursor glow -->
+<div id="cursor"></div>
+
+<!-- Scroll progress -->
+<div id="progress"></div>
+
+<!-- NAV -->
+<nav id="nav">
+  <a href="#" class="nav-logo">
+    <div class="logo-mark">T</div>
+    <span class="logo-text">Trial<span>Match</span></span>
+  </a>
+  <ul class="nav-links">
+    <li><a href="#how">How it works</a></li>
+    <li><a href="#features">Features</a></li>
+    <li><a href="#privacy">Privacy</a></li>
+    <li><a href="#languages">Languages</a></li>
+    <li><a href="#tech">Stack</a></li>
+  </ul>
+  <div class="nav-right">
+    <a href="https://github.com/Boweii22/TrialMatch/tree/fine-tune" target="_blank" class="nav-btn">GitHub →</a>
+    <button class="hamburger" id="hamburger" aria-label="Menu">
+      <span></span><span></span><span></span>
+    </button>
+  </div>
+</nav>
+
+<!-- Mobile menu -->
+<div class="mobile-menu" id="mobileMenu">
+  <a href="#how" onclick="closeMobile()">How it works</a>
+  <a href="#features" onclick="closeMobile()">Features</a>
+  <a href="#privacy" onclick="closeMobile()">Privacy</a>
+  <a href="#languages" onclick="closeMobile()">Languages</a>
+  <a href="#tech" onclick="closeMobile()">Stack</a>
+  <a href="https://github.com/Boweii22/TrialMatch/tree/fine-tune" target="_blank">GitHub →</a>
+</div>
+
+<!-- HERO -->
+<section class="hero">
+  <canvas id="hero-canvas"></canvas>
+  <div class="hero-content">
+    <div class="hero-left">
+      <div class="hero-badge"><div class="badge-live"></div>Google DeepMind — Gemma 4 Good Hackathon 2026</div>
+      <h1 class="hero-h1">
+        <span class="line-muted">Find the trial</span><br>
+        that could<br>
+        <span class="line-green">change your life.</span>
+      </h1>
+      <p class="hero-sub">
+        <strong>Gemma 4</strong> reads your medical records and finds clinical trials you qualify for — entirely on your laptop. No cloud. No API key. <strong>Your data never leaves your machine.</strong>
+      </p>
+      <div class="hero-actions">
+        <a href="https://github.com/Boweii22/TrialMatch/tree/fine-tune" target="_blank" class="btn-glow">⬇ Get Started Free</a>
+        <a href="#how" class="btn-ghost">See How It Works →</a>
+      </div>
+      <div class="hero-trust">
+        <span class="trust-item">🔒 No cloud</span>
+        <span class="trust-dot"></span>
+        <span class="trust-item">🦙 Runs via Ollama</span>
+        <span class="trust-dot"></span>
+        <span class="trust-item">💻 CPU only</span>
+        <span class="trust-dot"></span>
+        <span class="trust-item">🌍 7 languages</span>
+        <span class="trust-dot"></span>
+        <span class="trust-item">⚡ Open source</span>
+      </div>
+    </div>
+
+    <div class="hero-demo">
+      <div class="demo-card">
+        <div class="demo-bar">
+          <div class="demo-dots"><div class="dd dd1"></div><div class="dd dd2"></div><div class="dd dd3"></div></div>
+          <div class="demo-title">TrialMatch — Live Analysis</div>
+          <div class="demo-status"><span class="badge-live" style="width:5px;height:5px"></span>Processing</div>
+        </div>
+        <div class="demo-body" style="padding:1.2rem">
+          <div class="demo-step">
+            <div class="demo-step-icon">📄</div>
+            <div class="demo-step-text">
+              <strong>PDF Extracted — 3 pages</strong>
+              <span style="color:var(--muted)">Diagnosis, medications, lab values read locally</span>
+              <div class="demo-step-bar"><div class="demo-step-fill"></div></div>
+            </div>
+          </div>
+          <div class="demo-result">
+            <div class="dr-item m">
+              <div class="dr-bar m"></div>
+              <div class="dr-info">
+                <div class="dr-name">Phase III Diabetes Management Trial</div>
+                <div class="dr-conf">88% confidence · NCT04521943</div>
+              </div>
+              <div class="dr-v m">MATCH</div>
+            </div>
+            <div class="dr-item p">
+              <div class="dr-bar p"></div>
+              <div class="dr-info">
+                <div class="dr-name">Cardiovascular Risk Reduction Study</div>
+                <div class="dr-conf">61% confidence · NCT03847012</div>
+              </div>
+              <div class="dr-v p">PARTIAL</div>
+            </div>
+            <div class="dr-item n">
+              <div class="dr-bar n"></div>
+              <div class="dr-info">
+                <div class="dr-name">Oncology Immunotherapy Protocol</div>
+                <div class="dr-conf">18% confidence · NCT05109312</div>
+              </div>
+              <div class="dr-v n">NO</div>
+            </div>
+          </div>
+          <div class="demo-email">✉️ <span>Draft email to coordinator ready — <strong style="color:#fff">1 click to send</strong></span></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- TICKER -->
+<div class="ticker-wrap">
+  <div class="ticker">
+    <span>100% Local</span><span class="sep">·</span>
+    <span>Zero Cloud AI</span><span class="sep">·</span>
+    <span>Gemma 4 E4B</span><span class="sep">·</span>
+    <span>No API Key Required</span><span class="sep">·</span>
+    <span>7 Languages</span><span class="sep">·</span>
+    <span>Live ClinicalTrials.gov Data</span><span class="sep">·</span>
+    <span>90% Benchmark Accuracy</span><span class="sep">·</span>
+    <span>Real Verdicts</span><span class="sep">·</span>
+    <span>Auto-Draft Emails</span><span class="sep">·</span>
+    <span>Open Source</span><span class="sep">·</span>
+    <span>CPU Only</span><span class="sep">·</span>
+    <span>No GPU Needed</span><span class="sep">·</span>
+    <!-- dupe -->
+    <span>100% Local</span><span class="sep">·</span>
+    <span>Zero Cloud AI</span><span class="sep">·</span>
+    <span>Gemma 4 E4B</span><span class="sep">·</span>
+    <span>No API Key Required</span><span class="sep">·</span>
+    <span>7 Languages</span><span class="sep">·</span>
+    <span>Live ClinicalTrials.gov Data</span><span class="sep">·</span>
+    <span>90% Benchmark Accuracy</span><span class="sep">·</span>
+    <span>Real Verdicts</span><span class="sep">·</span>
+    <span>Auto-Draft Emails</span><span class="sep">·</span>
+    <span>Open Source</span><span class="sep">·</span>
+    <span>CPU Only</span><span class="sep">·</span>
+    <span>No GPU Needed</span><span class="sep">·</span>
+  </div>
+</div>
+
+<!-- PROBLEM -->
+<div class="section-full" style="background:var(--bg)">
+  <div class="section problem-grid">
+    <div class="problem-text reveal-left">
+      <div class="sec-label">The Problem</div>
+      <h2 class="sec-title">Millions of patients<br>never find <span>their trial.</span></h2>
+      <p class="sec-sub" style="margin-top:1.2rem">Clinical trials that could save lives go unfilled. Not because patients don't qualify — but because navigating eligibility criteria requires medical expertise most people don't have. The system was never designed with patients in mind.</p>
+      <blockquote>"Approximately 85% of clinical trials fail to recruit enough patients on time — while the patients who need them can't find them."</blockquote>
+    </div>
+    <div class="problem-stat-stack stagger reveal-right">
+      <div class="prob-stat s1">
+        <div class="ps-num c1"><span class="count" data-target="85">0</span>%</div>
+        <div class="ps-label">of clinical trials <strong>fail to recruit enough patients</strong> on time — not from lack of eligible candidates</div>
+      </div>
+      <div class="prob-stat s2">
+        <div class="ps-num c2"><span class="count" data-target="2">0</span>B+</div>
+        <div class="ps-label">people globally <strong>don't read English</strong> — the primary language of most trial communications</div>
+      </div>
+      <div class="prob-stat s3">
+        <div class="ps-num c3"><span class="count" data-target="0">0</span></div>
+        <div class="ps-label">bytes of your medical data <strong>transmitted anywhere</strong> with TrialMatch — it runs entirely on your device</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- HOW IT WORKS -->
+<div class="hiw-bg" id="how">
+  <div class="hiw-inner">
+    <div class="reveal" style="text-align:center;max-width:600px;margin:0 auto">
+      <div class="sec-label">How It Works</div>
+      <h2 class="sec-title">Four steps.<br><span>One verdict.</span></h2>
+      <p class="sec-sub" style="margin:0 auto">No accounts, no configuration, no medical knowledge required. Upload your records and let Gemma do the rest.</p>
+    </div>
+    <div class="steps-grid stagger" style="margin-top:4rem">
+      <div class="step-card">
+        <div class="step-num">Step 01</div>
+        <div class="step-icon-wrap si1">📄</div>
+        <h3>Upload Your Records</h3>
+        <p>Drop any PDF — discharge summary, lab report, clinical notes. PyMuPDF extracts text directly. Everything stays local.</p>
+      </div>
+      <div class="step-card">
+        <div class="step-num">Step 02</div>
+        <div class="step-icon-wrap si2">🎯</div>
+        <h3>Pick Condition & Language</h3>
+        <p>Select your primary condition and preferred language. TrialMatch fetches live open trials from ClinicalTrials.gov in real time.</p>
+      </div>
+      <div class="step-card">
+        <div class="step-num">Step 03</div>
+        <div class="step-icon-wrap si3">🧠</div>
+        <h3>Gemma Reads & Matches</h3>
+        <p>Gemma 4 extracts your full medical profile — diagnoses, medications, labs — then cross-references eligibility criteria for every trial.</p>
+      </div>
+      <div class="step-card">
+        <div class="step-num">Step 04</div>
+        <div class="step-icon-wrap si4">✉️</div>
+        <h3>Verdict + Email Drafted</h3>
+        <p>MATCH, PARTIAL, or NO — with a full reason, reasoning chain, and a professional email to the real trial coordinator ready to send.</p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- VIDEO DEMO -->
+<div style="background:var(--bg);padding:7rem 4rem;position:relative;overflow:hidden">
+  <div style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);width:700px;height:700px;border-radius:50%;background:radial-gradient(circle,rgba(0,212,255,.05) 0%,transparent 65%);pointer-events:none"></div>
+  <div style="max-width:1000px;margin:0 auto;position:relative;z-index:1">
+    <div class="reveal" style="text-align:center;margin-bottom:3rem">
+      <div class="sec-label">Watch the Demo</div>
+      <h2 class="sec-title">See TrialMatch<br><span class="teal">in action.</span></h2>
+      <p class="sec-sub" style="margin:.75rem auto 0;text-align:center">From PDF upload to MATCH verdict, coordinator email, and Urdu translation — all running locally on one laptop.</p>
+    </div>
+    <div class="reveal" style="position:relative;border-radius:20px;overflow:hidden;border:1px solid var(--border2);box-shadow:0 40px 80px rgba(0,0,0,.5),0 0 0 1px rgba(255,255,255,.04);background:var(--bg2)">
+      <div style="display:flex;align-items:center;justify-content:space-between;padding:1rem 1.5rem;border-bottom:1px solid var(--border);background:rgba(0,0,0,.2)">
+        <div style="display:flex;gap:.4rem"><div style="width:12px;height:12px;border-radius:50%;background:#ff5f57"></div><div style="width:12px;height:12px;border-radius:50%;background:#febc2e"></div><div style="width:12px;height:12px;border-radius:50%;background:#28c840"></div></div>
+        <div style="font-size:.75rem;color:var(--muted);font-family:monospace">TrialMatch — Full Demo · Gemma 4 Good Hackathon 2026</div>
+        <div style="display:flex;align-items:center;gap:.4rem;font-size:.65rem;color:var(--green);font-weight:700"><div class="badge-live" style="width:5px;height:5px"></div>Live Recording</div>
+      </div>
+      <div style="position:relative;padding-bottom:56.25%;height:0">
+        <iframe
+          style="position:absolute;top:0;left:0;width:100%;height:100%;border:0"
+          src="https://www.youtube.com/embed/SzUjDvUIkJ4"
+          title="TrialMatch Demo — Gemma 4 Good Hackathon 2026"
+          allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+          allowfullscreen>
+        </iframe>
+      </div>
+    </div>
+    <div class="reveal" style="display:flex;gap:1rem;justify-content:center;flex-wrap:wrap;margin-top:1.5rem">
+      <span style="display:inline-flex;align-items:center;gap:.4rem;background:var(--card);border:1px solid var(--border);border-radius:100px;padding:.4rem 1rem;font-size:.72rem;font-weight:600;color:var(--muted2)">📄 PDF Upload</span>
+      <span style="color:var(--muted);font-size:.8rem;align-self:center">→</span>
+      <span style="display:inline-flex;align-items:center;gap:.4rem;background:var(--card);border:1px solid var(--border);border-radius:100px;padding:.4rem 1rem;font-size:.72rem;font-weight:600;color:var(--muted2)">🧠 Gemma Reads Locally</span>
+      <span style="color:var(--muted);font-size:.8rem;align-self:center">→</span>
+      <span style="display:inline-flex;align-items:center;gap:.4rem;background:rgba(0,255,136,.07);border:1px solid rgba(0,255,136,.2);border-radius:100px;padding:.4rem 1rem;font-size:.72rem;font-weight:700;color:var(--green)">✓ MATCH Verdict</span>
+      <span style="color:var(--muted);font-size:.8rem;align-self:center">→</span>
+      <span style="display:inline-flex;align-items:center;gap:.4rem;background:var(--card);border:1px solid var(--border);border-radius:100px;padding:.4rem 1rem;font-size:.72rem;font-weight:600;color:var(--muted2)">✉️ Email Drafted</span>
+      <span style="color:var(--muted);font-size:.8rem;align-self:center">→</span>
+      <span style="display:inline-flex;align-items:center;gap:.4rem;background:var(--card);border:1px solid var(--border);border-radius:100px;padding:.4rem 1rem;font-size:.72rem;font-weight:600;color:var(--muted2)">🌍 Urdu Translation</span>
+    </div>
+  </div>
+</div>
+
+<!-- LIVE DEMO MOCKUP -->
+<div class="demo-section reveal">
+  <div style="text-align:center;max-width:600px;margin:0 auto 3.5rem">
+    <div class="sec-label">Live Interface</div>
+    <h2 class="sec-title">See exactly what<br><span>you get.</span></h2>
+  </div>
+  <div class="demo-window">
+    <div class="dw-bar">
+      <div class="dw-dots"><div class="dw-d dw-d1"></div><div class="dw-d dw-d2"></div><div class="dw-d dw-d3"></div></div>
+      <div class="dw-url">localhost:7860 — TrialMatch</div>
+    </div>
+    <div class="dw-body">
+      <div class="dw-left">
+        <div class="dw-label">Input</div>
+        <div class="upload-zone">
+          <div class="upload-icon">📎</div>
+          <div class="upload-text"><strong>patient_records.pdf</strong>Ready to analyze · 2.4 MB</div>
+        </div>
+        <div class="input-row">
+          <div class="fake-input">Type 2 Diabetes</div>
+          <div class="fake-select">English</div>
+        </div>
+        <div class="run-btn">⚡ Run TrialMatch</div>
+      </div>
+      <div class="dw-right">
+        <div class="dw-label">Results — 3 Trials Analyzed</div>
+        <div class="result-item match">
+          <div class="ri-bar m"></div>
+          <div class="ri-top">
+            <div class="ri-name" style="padding-left:.5rem">SUSTAIN-8: Semaglutide vs Sitagliptin</div>
+            <div class="ri-verdict rv-m">MATCH</div>
+          </div>
+          <div class="ri-conf" style="margin-left:.5rem"><div class="ri-conf-fill cf-m" style="width:88%"></div></div>
+          <div class="ri-reason" style="padding-left:.5rem">Patient meets all inclusion criteria. HbA1c 8.1% within required 7.5–10% range. Age and eGFR qualify.</div>
+        </div>
+        <div class="result-item partial">
+          <div class="ri-bar p"></div>
+          <div class="ri-top">
+            <div class="ri-name" style="padding-left:.5rem">CREDENCE: Canagliflozin Renal Study</div>
+            <div class="ri-verdict rv-p">PARTIAL</div>
+          </div>
+          <div class="ri-conf" style="margin-left:.5rem"><div class="ri-conf-fill cf-p" style="width:62%"></div></div>
+          <div class="ri-reason" style="padding-left:.5rem">Age and diagnosis qualify. Creatinine 1.4 mg/dL borderline — further screening required.</div>
+        </div>
+        <div class="result-item no">
+          <div class="ri-bar n"></div>
+          <div class="ri-top">
+            <div class="ri-name" style="padding-left:.5rem">DAPA-HF: Dapagliflozin Heart Failure</div>
+            <div class="ri-verdict rv-n">NO</div>
+          </div>
+          <div class="ri-conf" style="margin-left:.5rem"><div class="ri-conf-fill cf-n" style="width:22%"></div></div>
+          <div class="ri-reason" style="padding-left:.5rem">Requires confirmed heart failure diagnosis (NYHA Class II–IV). Not present in records.</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- FEATURES -->
+<div id="features" style="background:var(--bg2);border-top:1px solid var(--border)">
+  <div class="section">
+    <div class="reveal" style="text-align:center;max-width:600px;margin:0 auto">
+      <div class="sec-label">Features</div>
+      <h2 class="sec-title">Built different.<br><span>Built for patients.</span></h2>
+      <p class="sec-sub" style="margin:0 auto">Everything a hospital system would build — running entirely on your CPU, in your living room, in your language.</p>
+    </div>
+    <div class="features-grid stagger">
+      <div class="feat-card">
+        <div class="feat-icon fi-g">🔒</div>
+        <h3>100% Local Inference</h3>
+        <p>Gemma 4 E4B runs via Ollama on your CPU. Your medical records are never uploaded, transmitted, or stored outside your machine. Verifiable — the model runs on your hardware.</p>
+        <span class="feat-tag">Zero cloud</span>
+      </div>
+      <div class="feat-card">
+        <div class="feat-icon fi-t">🎯</div>
+        <h3>Smart Eligibility Matching</h3>
+        <p>Extracts diagnosis, medications, lab values, allergies, and exclusion flags — then cross-references them against real trial criteria to deliver a precise MATCH / PARTIAL / NO verdict.</p>
+        <span class="feat-tag">90% accuracy</span>
+      </div>
+      <div class="feat-card">
+        <div class="feat-icon fi-b">📡</div>
+        <h3>Live ClinicalTrials.gov Data</h3>
+        <p>Pulls real, currently open trials from the official NIH database. Falls back to local DB when offline. You always see current, accurate trials — never stale cached data.</p>
+        <span class="feat-tag">Real trials</span>
+      </div>
+      <div class="feat-card">
+        <div class="feat-icon fi-p">🧠</div>
+        <h3>Clinical Reasoning Chain</h3>
+        <p>For every MATCH or PARTIAL verdict, Gemma generates a step-by-step clinical explanation — which criteria were checked, which values matched, and why the verdict was reached.</p>
+        <span class="feat-tag">Transparent AI</span>
+      </div>
+      <div class="feat-card">
+        <div class="feat-icon fi-o">✉️</div>
+        <h3>Auto-Drafted Coordinator Email</h3>
+        <p>One click generates a professional inquiry email addressed to the real coordinator of the real trial, using your de-identified medical profile. Hospital-grade language, instantly.</p>
+        <span class="feat-tag">1-click email</span>
+      </div>
+      <div class="feat-card">
+        <div class="feat-icon fi-r">🌍</div>
+        <h3>9 Languages</h3>
+        <p>Full results translated into Urdu, Arabic, Hindi, Spanish, French, Simplified Chinese, Swahili, Portuguese, and Bengali. Because your language should never be a barrier to your healthcare.</p>
+        <span class="feat-tag">2B+ patients</span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- PRIVACY -->
+<div class="privacy-section" id="privacy">
+  <div class="privacy-glow"></div>
+  <div class="privacy-inner">
+    <div class="privacy-text reveal-left">
+      <div class="sec-label">Privacy First</div>
+      <h2>Your data never <span>leaves this room.</span></h2>
+      <p>No cloud API. No third-party model. No telemetry. No account creation. TrialMatch is the only AI health tool where you can genuinely verify that claim — because the model runs on your hardware, not ours.</p>
+      <div class="privacy-chips">
+        <span class="priv-chip">No cloud</span>
+        <span class="priv-chip">No API key</span>
+        <span class="priv-chip">No account</span>
+        <span class="priv-chip">No telemetry</span>
+        <span class="priv-chip">No GPU required</span>
+        <span class="priv-chip">No internet for inference</span>
+        <span class="priv-chip">100% open source</span>
+        <span class="priv-chip">Auditable code</span>
+      </div>
+    </div>
+    <div class="privacy-visual reveal-right">
+      <div class="lock-card">
+        <span class="lock-icon">🔐</span>
+        <h3>Zero Data Transmitted</h3>
+        <p>Medical records are read locally by PyMuPDF. Gemma 4 processes everything on-device. ClinicalTrials.gov is queried by condition name only — never by patient data.</p>
+        <div class="zero-cloud">✓ &nbsp;Zero bytes sent to any AI server</div>
+        <div class="data-flow">
+          <div class="df-item"><span>📄</span><span>PDF parsed locally — PyMuPDF</span><span class="df-check">✓ Local</span></div>
+          <div class="df-item"><span>🧠</span><span>AI inference — Ollama + Gemma 4</span><span class="df-check">✓ Local</span></div>
+          <div class="df-item"><span>📡</span><span>Trial fetch — condition name only</span><span class="df-check">✓ Safe</span></div>
+          <div class="df-item"><span>✉️</span><span>Email draft — generated locally</span><span class="df-check">✓ Local</span></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- LANGUAGES -->
+<div id="languages">
+  <div class="lang-section">
+    <div class="reveal" style="text-align:center;max-width:680px;margin:0 auto">
+      <div class="sec-label">Languages</div>
+      <h2 class="sec-title">Two billion patients<br>don't read <span class="teal">English.</span></h2>
+      <p class="sec-sub" style="margin:1rem auto 0;text-align:center">That should never disqualify anyone from their own healthcare. TrialMatch translates your full results — verdicts, reasoning, and next steps — into the language you actually speak.</p>
+    </div>
+    <div class="lang-grid stagger">
+      <div class="lang-card"><span class="lang-script">اردو</span><div class="lang-name">Urdu</div><div class="lang-native">اردو</div></div>
+      <div class="lang-card"><span class="lang-script">عربي</span><div class="lang-name">Arabic</div><div class="lang-native">العربية</div></div>
+      <div class="lang-card"><span class="lang-script">हि</span><div class="lang-name">Hindi</div><div class="lang-native">हिन्दी</div></div>
+      <div class="lang-card"><span class="lang-script">Es</span><div class="lang-name">Spanish</div><div class="lang-native">Español</div></div>
+      <div class="lang-card"><span class="lang-script">Fr</span><div class="lang-name">French</div><div class="lang-native">Français</div></div>
+      <div class="lang-card"><span class="lang-script">中</span><div class="lang-name">Chinese</div><div class="lang-native">简体中文</div></div>
+      <div class="lang-card"><span class="lang-script">Sw</span><div class="lang-name">Swahili</div><div class="lang-native">Kiswahili</div></div>
+      <div class="lang-card"><span class="lang-script">Pt</span><div class="lang-name">Portuguese</div><div class="lang-native">Português</div></div>
+      <div class="lang-card"><span class="lang-script">বাং</span><div class="lang-name">Bengali</div><div class="lang-native">বাংলা</div></div>
+    </div>
+    <div class="lang-note reveal">
+      <p>Every result — verdict, reasoning chain, next steps, and email draft — is available in your language. Powered by Gemma 4 with clinical terminology preserved in English for accuracy. <strong>No patient should face their diagnosis alone because of a language barrier.</strong></p>
+    </div>
+  </div>
+</div>
+
+<!-- STATS -->
+<div class="stats-section">
+  <div class="stats-inner">
+    <div class="reveal" style="text-align:center">
+      <div class="sec-label">By the numbers</div>
+      <h2 class="sec-title" style="margin-bottom:0">Built to perform.<br><span>Proven to work.</span></h2>
+    </div>
+    <div class="stats-grid stagger">
+      <div class="stat-item">
+        <div class="stat-number"><span class="count" data-target="90">0</span><span class="unit">%</span></div>
+        <div class="stat-desc">Benchmark accuracy on held-out test set</div>
+      </div>
+      <div class="stat-item">
+        <div class="stat-number"><span class="unit">0</span></div>
+        <div class="stat-desc">Cloud API calls — fully local inference</div>
+      </div>
+      <div class="stat-item">
+        <div class="stat-number"><span class="count" data-target="9">0</span></div>
+        <div class="stat-desc">Languages supported for full translation</div>
+      </div>
+      <div class="stat-item">
+        <div class="stat-number"><span class="count" data-target="4">0</span><span class="unit">B</span></div>
+        <div class="stat-desc">Gemma 4 parameters — efficient & fast</div>
+      </div>
+      <div class="stat-item">
+        <div class="stat-number"><span class="count" data-target="1">0</span></div>
+        <div class="stat-desc">Click to draft a full coordinator email</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- TECH STACK -->
+<div id="tech">
+  <div class="tech-section">
+    <div class="reveal">
+      <div class="sec-label">Tech Stack</div>
+      <h2 class="sec-title">Open source.<br><span>All the way down.</span></h2>
+      <p class="sec-sub">No proprietary black boxes. Every component is auditable, replaceable, and free.</p>
+    </div>
+    <div class="tech-grid stagger">
+      <div class="tech-card"><span class="tech-emoji">🤖</span><div class="tech-info"><div class="tech-name">Gemma 4 E4B</div><div class="tech-role">Core AI model</div></div></div>
+      <div class="tech-card"><span class="tech-emoji">🦙</span><div class="tech-info"><div class="tech-name">Ollama</div><div class="tech-role">Local inference engine</div></div></div>
+      <div class="tech-card"><span class="tech-emoji">🐍</span><div class="tech-info"><div class="tech-name">Python 3.14</div><div class="tech-role">Backend runtime</div></div></div>
+      <div class="tech-card"><span class="tech-emoji">🎨</span><div class="tech-info"><div class="tech-name">Gradio 6</div><div class="tech-role">UI framework</div></div></div>
+      <div class="tech-card"><span class="tech-emoji">📄</span><div class="tech-info"><div class="tech-name">PyMuPDF</div><div class="tech-role">PDF text extraction</div></div></div>
+      <div class="tech-card"><span class="tech-emoji">🏥</span><div class="tech-info"><div class="tech-name">ClinicalTrials.gov</div><div class="tech-role">Live trial database</div></div></div>
+      <div class="tech-card"><span class="tech-emoji">💻</span><div class="tech-info"><div class="tech-name">CPU Inference</div><div class="tech-role">No GPU required</div></div></div>
+      <div class="tech-card"><span class="tech-emoji">🔓</span><div class="tech-info"><div class="tech-name">Open Source</div><div class="tech-role">MIT Licensed</div></div></div>
+    </div>
+    <div class="hackathon-badge reveal">
+      <div class="hb-icon">🏆</div>
+      <div class="hb-text">
+        <h3>Google DeepMind — Gemma 4 Good Hackathon 2026</h3>
+        <p>TrialMatch was built for the Gemma 4 Good Hackathon — a competition focused on using Gemma 4 for meaningful, real-world social impact. <a href="" target="_blank">View the full submission on GitHub →</a></p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- CTA -->
+<div class="cta-section">
+  <div class="cta-inner reveal">
+    <div class="sec-label" style="text-align:center">Get Started</div>
+    <h2>Ready to find <span>your match?</span></h2>
+    <p>Free. Local. Private. Open source. Install Ollama, pull Gemma 4, and run TrialMatch. Everything you need is on GitHub.</p>
+    <div class="cta-btns">
+      <a href="https://github.com/Boweii22/TrialMatch/tree/fine-tune" target="_blank" class="btn-glow">⬇ View on GitHub</a>
+      <a href="https://github.com/Boweii22/TrialMatch/tree/fine-tune#readme" target="_blank" class="btn-ghost">Read the Docs →</a>
+    </div>
+  </div>
+</div>
+
+<!-- FOOTER -->
+<footer>
+  <div class="footer-inner">
+    <a href="#" class="footer-logo">
+      <div class="logo-mark" style="width:24px;height:24px;font-size:12px">T</div>
+      <span class="logo-text">Trial<span>Match</span></span>
+    </a>
+    <div class="footer-copy">
+      Built for the Google DeepMind Gemma 4 Good Hackathon · 2026<br>
+      Gemma 4 · Ollama · Python · Gradio · ClinicalTrials.gov API
+    </div>
+    <div class="footer-links">
+      <a href="https://github.com/Boweii22/TrialMatch/tree/fine-tune" target="_blank">GitHub</a>
+      <a href="https://clinicaltrials.gov" target="_blank">ClinicalTrials.gov</a>
+      <a href="https://ollama.com" target="_blank">Ollama</a>
+    </div>
+  </div>
+</footer>
+
+<script>
+/* ── CURSOR GLOW ── */
+const cursor = document.getElementById('cursor');
+document.addEventListener('mousemove', e => {
+  cursor.style.left = e.clientX + 'px';
+  cursor.style.top  = e.clientY + 'px';
+});
+
+/* ── SCROLL PROGRESS ── */
+const progress = document.getElementById('progress');
+const nav = document.getElementById('nav');
+window.addEventListener('scroll', () => {
+  const h = document.documentElement;
+  const pct = (h.scrollTop / (h.scrollHeight - h.clientHeight)) * 100;
+  progress.style.width = pct + '%';
+  nav.classList.toggle('scrolled', h.scrollTop > 40);
+}, { passive: true });
+
+/* ── MOBILE MENU ── */
+const hamburger = document.getElementById('hamburger');
+const mobileMenu = document.getElementById('mobileMenu');
+hamburger.addEventListener('click', () => {
+  hamburger.classList.toggle('open');
+  mobileMenu.classList.toggle('open');
+});
+function closeMobile() {
+  hamburger.classList.remove('open');
+  mobileMenu.classList.remove('open');
+}
+
+/* ── HERO CANVAS — NEURAL PARTICLES ── */
+(function() {
+  const canvas = document.getElementById('hero-canvas');
+  const ctx = canvas.getContext('2d');
+  let W, H, particles = [], animId;
+
+  function resize() {
+    W = canvas.width  = canvas.offsetWidth;
+    H = canvas.height = canvas.offsetHeight;
+  }
+  resize();
+  window.addEventListener('resize', () => { resize(); });
+
+  const N = window.innerWidth < 640 ? 40 : 80;
+  const MAX_DIST = 140;
+  const colors = ['#00ff88','#00d4ff','#3b82f6','#8b5cf6'];
+
+  for (let i = 0; i < N; i++) {
+    particles.push({
+      x: Math.random() * W,
+      y: Math.random() * H,
+      vx: (Math.random() - .5) * .4,
+      vy: (Math.random() - .5) * .4,
+      r: Math.random() * 2 + .5,
+      color: colors[Math.floor(Math.random() * colors.length)],
+      alpha: Math.random() * .5 + .2,
+    });
+  }
+
+  function draw() {
+    ctx.clearRect(0, 0, W, H);
+    for (let i = 0; i < N; i++) {
+      const p = particles[i];
+      p.x += p.vx; p.y += p.vy;
+      if (p.x < 0 || p.x > W) p.vx *= -1;
+      if (p.y < 0 || p.y > H) p.vy *= -1;
+
+      ctx.beginPath();
+      ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2);
+      ctx.fillStyle = p.color + Math.floor(p.alpha * 255).toString(16).padStart(2,'0');
+      ctx.fill();
+
+      for (let j = i + 1; j < N; j++) {
+        const q = particles[j];
+        const dx = p.x - q.x, dy = p.y - q.y;
+        const dist = Math.sqrt(dx*dx + dy*dy);
+        if (dist < MAX_DIST) {
+          const a = (1 - dist / MAX_DIST) * .18;
+          ctx.beginPath();
+          ctx.moveTo(p.x, p.y);
+          ctx.lineTo(q.x, q.y);
+          ctx.strokeStyle = `rgba(0,255,136,${a})`;
+          ctx.lineWidth = .5;
+          ctx.stroke();
+        }
+      }
+    }
+    animId = requestAnimationFrame(draw);
+  }
+  draw();
+})();
+
+/* ── INTERSECTION OBSERVER — REVEAL ── */
+const revealObs = new IntersectionObserver(entries => {
+  entries.forEach(e => {
+    if (e.isIntersecting) {
+      e.target.classList.add('visible');
+      revealObs.unobserve(e.target);
+    }
+  });
+}, { threshold: 0.1 });
+
+document.querySelectorAll('.reveal,.reveal-left,.reveal-right,.stagger').forEach(el => revealObs.observe(el));
+
+/* ── COUNTER ANIMATION ── */
+function animateCount(el, target, duration = 1800) {
+  const isFloat = String(target).includes('.');
+  let start = null;
+  function step(ts) {
+    if (!start) start = ts;
+    const progress = Math.min((ts - start) / duration, 1);
+    const ease = 1 - Math.pow(1 - progress, 3);
+    const val = ease * target;
+    el.textContent = isFloat ? val.toFixed(1) : Math.floor(val).toLocaleString();
+    if (progress < 1) requestAnimationFrame(step);
+    else el.textContent = target.toLocaleString();
+  }
+  requestAnimationFrame(step);
+}
+
+const counterObs = new IntersectionObserver(entries => {
+  entries.forEach(e => {
+    if (e.isIntersecting) {
+      const target = parseFloat(e.target.dataset.target);
+      animateCount(e.target, target);
+      counterObs.unobserve(e.target);
+    }
+  });
+}, { threshold: 0.3 });
+
+document.querySelectorAll('.count').forEach(el => counterObs.observe(el));
+
+/* ── 3D TILT ── */
+document.querySelectorAll('.feat-card,.step-card').forEach(card => {
+  card.addEventListener('mousemove', e => {
+    const r = card.getBoundingClientRect();
+    const x = (e.clientX - r.left) / r.width  - .5;
+    const y = (e.clientY - r.top)  / r.height - .5;
+    card.style.transform = `translateY(-6px) rotateY(${x*8}deg) rotateX(${-y*8}deg)`;
+  });
+  card.addEventListener('mouseleave', () => {
+    card.style.transform = '';
+  });
+});
+
+/* ── SMOOTH ANCHOR SCROLL ── */
+document.querySelectorAll('a[href^="#"]').forEach(a => {
+  a.addEventListener('click', e => {
+    const id = a.getAttribute('href').slice(1);
+    const el = document.getElementById(id);
+    if (el) {
+      e.preventDefault();
+      el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+  });
+});
+</script>
+</body>
+</html>
