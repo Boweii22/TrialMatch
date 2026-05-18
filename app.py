@@ -631,7 +631,7 @@ _THEME_JS = """
         _tmLast = txt;
 
         // New run starting — reset so we notify again when it finishes
-        if (/Step [1-4]\/4/.test(txt) || txt.includes('Reading your medical')) {
+        if (/Step [1-4]\\/4/.test(txt) || txt.includes('Reading your medical')) {
             _tmNotified = false;
             return;
         }
